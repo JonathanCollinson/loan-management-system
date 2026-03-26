@@ -114,9 +114,7 @@ export class LoansService {
     const interestAmount = principal * (interestRate / 100);
     const totalAmount = principal + interestAmount;
     const termMonths = input.termMonths;
-    const startDate = input.startDate
-      ? new Date(input.startDate)
-      : new Date();
+    const startDate = input.startDate ? new Date(input.startDate) : new Date();
     const endDate = addMonths(startDate, termMonths);
     const monthlyInstallment = totalAmount / termMonths;
 
@@ -168,7 +166,7 @@ export class LoansService {
       await session.abortTransaction();
       throw err;
     } finally {
-      session.endSession();
+      await session.endSession();
     }
   }
 
@@ -190,7 +188,10 @@ export class LoansService {
     const doc = await this.loansRepo.findById(id);
     if (!doc) throw new NotFoundException('Loan not found');
 
-    if (actor.role === UserRole.USER && doc.ownerUserId.toString() !== actor.id) {
+    if (
+      actor.role === UserRole.USER &&
+      doc.ownerUserId.toString() !== actor.id
+    ) {
       throw new ForbiddenException();
     }
 

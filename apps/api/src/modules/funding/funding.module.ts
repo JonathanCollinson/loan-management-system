@@ -17,7 +17,7 @@ import { FundingService } from './funding.service';
       { name: FundingTransfer.name, schema: FundingTransferSchema },
     ]),
     UsersModule,
-    LoansModule,
+    forwardRef(() => LoansModule),
     forwardRef(() => MonthlyPrincipalBudgetModule),
   ],
   providers: [FundingRepository, FundingService, FundingResolver],

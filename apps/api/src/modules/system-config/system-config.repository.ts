@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { SystemConfig, SystemConfigDocument } from './schemas/system-config.schema';
+import {
+  SystemConfig,
+  SystemConfigDocument,
+} from './schemas/system-config.schema';
 
 @Injectable()
 export class SystemConfigRepository {
@@ -21,9 +24,7 @@ export class SystemConfigRepository {
     });
   }
 
-  async setDefaultInterestRate(
-    rate: number,
-  ): Promise<SystemConfigDocument> {
+  async setDefaultInterestRate(rate: number): Promise<SystemConfigDocument> {
     const doc = await this.model
       .findOneAndUpdate(
         { singletonKey: 'global' },

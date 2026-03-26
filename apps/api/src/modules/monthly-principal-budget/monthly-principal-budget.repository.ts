@@ -66,9 +66,6 @@ export class MonthlyPrincipalBudgetRepository {
   async listEventsForMonth(
     month: string,
   ): Promise<MonthlyPrincipalBudgetEventDocument[]> {
-    return this.eventModel
-      .find({ month })
-      .sort({ createdAt: 1 })
-      .exec();
+    return this.eventModel.find({ month }).sort({ createdAt: 1 }).exec();
   }
 }

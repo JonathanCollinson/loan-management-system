@@ -24,8 +24,7 @@ export class MonthlyPrincipalBudgetService {
   private eventToObject(
     doc: MonthlyPrincipalBudgetEventDocument,
   ): MonthlyPrincipalBudgetEventObject {
-    const createdAt =
-      (doc as { createdAt?: Date }).createdAt ?? new Date();
+    const createdAt = (doc as { createdAt?: Date }).createdAt ?? new Date();
     return {
       id: doc._id.toString(),
       month: doc.month,
@@ -42,8 +41,11 @@ export class MonthlyPrincipalBudgetService {
     const { start, end } = parseMonth(month);
     const budget = await this.repo.findByMonth(month);
     const events = await this.repo.listEventsForMonth(month);
-    const allocatedTotal =
-      await this.fundingRepo.sumTotalAllocationsInMonth(month, start, end);
+    const allocatedTotal = await this.fundingRepo.sumTotalAllocationsInMonth(
+      month,
+      start,
+      end,
+    );
     const principalLoanedTotal =
       await this.loansRepo.sumPrincipalCreatedBetween(start, end);
 
@@ -83,8 +85,11 @@ export class MonthlyPrincipalBudgetService {
     const cap = await this.getTotalPrincipalForMonth(month);
     if (cap === null) return;
     const { start, end } = parseMonth(month);
-    const current =
-      await this.fundingRepo.sumTotalAllocationsInMonth(month, start, end);
+    const current = await this.fundingRepo.sumTotalAllocationsInMonth(
+      month,
+      start,
+      end,
+    );
     if (current + additionalAmount > cap + 1e-9) {
       throw new BadRequestException(
         `Funding allocations for ${month} would exceed the monthly principal budget (${cap})`,
@@ -99,10 +104,7 @@ export class MonthlyPrincipalBudgetService {
     const cap = await this.getTotalPrincipalForMonth(month);
     if (cap === null) return;
     const { start, end } = parseMonth(month);
-    const current = await this.loansRepo.sumPrincipalCreatedBetween(
-      start,
-      end,
-    );
+    const current = await this.loansRepo.sumPrincipalCreatedBetween(start, end);
     if (current + additionalPrincipal > cap + 1e-9) {
       throw new BadRequestException(
         `Loan principal for ${month} would exceed the monthly principal budget (${cap})`,
@@ -142,7 +144,7 @@ export class MonthlyPrincipalBudgetService {
       await session.abortTransaction();
       throw e;
     } finally {
-      session.endSession();
+      await session.endSession();
     }
 
     return this.getDetail(month);
@@ -180,7 +182,7 @@ export class MonthlyPrincipalBudgetService {
       await session.abortTransaction();
       throw e;
     } finally {
-      session.endSession();
+      await session.endSession();
     }
 
     return this.getDetail(month);

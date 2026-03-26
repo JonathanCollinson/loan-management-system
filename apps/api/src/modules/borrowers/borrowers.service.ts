@@ -44,15 +44,14 @@ export class BorrowersService {
   private resolveOwnerId(actor: JwtUser, input: CreateBorrowerInput): string {
     if (actor.role === UserRole.USER) {
       if (input.ownerUserId) {
-        throw new BadRequestException('ownerUserId is not allowed for field users');
+        throw new BadRequestException(
+          'ownerUserId is not allowed for field users',
+        );
       }
       return actor.id;
     }
 
-    if (
-      actor.role === UserRole.ADMIN ||
-      actor.role === UserRole.SUPER_ADMIN
-    ) {
+    if (actor.role === UserRole.ADMIN || actor.role === UserRole.SUPER_ADMIN) {
       if (!input.ownerUserId) {
         throw new BadRequestException('ownerUserId is required for admins');
       }

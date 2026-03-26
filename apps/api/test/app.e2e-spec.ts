@@ -7,7 +7,7 @@ import { AppModule } from '../src/app.module';
 describe('Health (e2e)', () => {
   let app: INestApplication<App>;
 
-  beforeAll(async () => {
+  beforeAll(() => {
     if (!process.env.MONGODB_URI) {
       process.env.MONGODB_URI = 'mongodb://127.0.0.1:27017/lms_e2e';
     }
@@ -41,7 +41,7 @@ describe('Health (e2e)', () => {
       .get('/health')
       .expect(200)
       .expect((res) => {
-        expect(res.body.status).toBe('ok');
+        expect((res.body as { status?: string }).status).toBe('ok');
       });
   });
 });

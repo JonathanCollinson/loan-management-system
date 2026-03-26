@@ -1,5 +1,12 @@
 import { Field, Float, InputType, Int } from '@nestjs/graphql';
-import { IsDateString, IsEnum, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import {
+  IsDateString,
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
 import { InterestType } from '../../../common/enums/interest-type.enum';
 
 @InputType()

@@ -17,7 +17,10 @@ import {
 @Module({
   imports: [
     MongooseModule.forFeature([
-      { name: MonthlyPrincipalBudget.name, schema: MonthlyPrincipalBudgetSchema },
+      {
+        name: MonthlyPrincipalBudget.name,
+        schema: MonthlyPrincipalBudgetSchema,
+      },
       {
         name: MonthlyPrincipalBudgetEvent.name,
         schema: MonthlyPrincipalBudgetEventSchema,

@@ -67,9 +67,7 @@ export class LoansRepository {
     return q.exec();
   }
 
-  async sumPrincipalOutstandingForOwner(
-    ownerUserId: string,
-  ): Promise<number> {
+  async sumPrincipalOutstandingForOwner(ownerUserId: string): Promise<number> {
     if (!Types.ObjectId.isValid(ownerUserId)) return 0;
     const agg = await this.loanModel
       .aggregate<{ total: number }>([

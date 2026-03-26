@@ -2,11 +2,7 @@ import { UserRole } from '../../common/enums/user-role.enum';
 import type { JwtUser } from '../../common/types/jwt-user';
 import { resolveLenderWalletUserId } from './lender-wallet.util';
 
-function user(
-  id: string,
-  role: UserRole,
-  email = 'x@test',
-): JwtUser {
+function user(id: string, role: UserRole, email = 'x@test'): JwtUser {
   return { id, email, role };
 }
 

@@ -49,15 +49,8 @@ export class FundingService {
     actor: JwtUser,
   ): Promise<FundingTransferObject> {
     const recipient = await this.usersRepo.findById(input.recipientUserId);
-    const allowedRoles = [
-      UserRole.USER,
-      UserRole.ADMIN,
-      UserRole.SUPER_ADMIN,
-    ];
-    if (
-      !recipient ||
-      !allowedRoles.includes(recipient.role as UserRole)
-    ) {
+    const allowedRoles = [UserRole.USER, UserRole.ADMIN, UserRole.SUPER_ADMIN];
+    if (!recipient || !allowedRoles.includes(recipient.role)) {
       throw new BadRequestException(
         'Recipient must be a field user, admin, or super admin',
       );
@@ -96,10 +89,7 @@ export class FundingService {
     month: string,
     actor: JwtUser,
   ): Promise<FundingUtilizationPayload> {
-    if (
-      actor.role !== UserRole.ADMIN &&
-      actor.role !== UserRole.SUPER_ADMIN
-    ) {
+    if (actor.role !== UserRole.ADMIN && actor.role !== UserRole.SUPER_ADMIN) {
       throw new ForbiddenException();
     }
 
@@ -112,12 +102,13 @@ export class FundingService {
 
     for (const u of fieldUsers) {
       const uid = u._id.toString();
-      const fundingAssigned = await this.fundingRepo.sumAmountForRecipientInMonth(
-        uid,
-        month,
-        start,
-        end,
-      );
+      const fundingAssigned =
+        await this.fundingRepo.sumAmountForRecipientInMonth(
+          uid,
+          month,
+          start,
+          end,
+        );
       const loans = await this.loansRepo.findCreatedBetween(start, end, uid);
       const principalLoaned = loans.reduce((s, l) => s + l.principalAmount, 0);
 

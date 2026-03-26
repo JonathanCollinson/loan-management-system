@@ -1,4 +1,10 @@
-import { Field, Float, ID, ObjectType, registerEnumType } from '@nestjs/graphql';
+import {
+  Field,
+  Float,
+  ID,
+  ObjectType,
+  registerEnumType,
+} from '@nestjs/graphql';
 import { UserRole } from '../../../common/enums/user-role.enum';
 
 registerEnumType(UserRole, { name: 'UserRole' });

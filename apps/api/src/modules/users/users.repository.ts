@@ -40,9 +40,7 @@ export class UsersRepository {
     data: Partial<User>,
   ): Promise<UserDocument | null> {
     if (!Types.ObjectId.isValid(id)) return null;
-    return this.userModel
-      .findByIdAndUpdate(id, data, { new: true })
-      .exec();
+    return this.userModel.findByIdAndUpdate(id, data, { new: true }).exec();
   }
 
   async incrementWallet(

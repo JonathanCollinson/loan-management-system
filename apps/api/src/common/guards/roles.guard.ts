@@ -9,6 +9,7 @@ import { GqlExecutionContext } from '@nestjs/graphql';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 import { UserRole } from '../enums/user-role.enum';
+import type { GraphqlRequestContext } from '../types/graphql-request-context';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -32,8 +33,8 @@ export class RolesGuard implements CanActivate {
     }
 
     const ctx = GqlExecutionContext.create(context);
-    const req = ctx.getContext().req;
-    const user = req.user as { role: UserRole } | undefined;
+    const req = ctx.getContext<GraphqlRequestContext>().req;
+    const user = req.user;
     if (!user) {
       throw new ForbiddenException();
     }

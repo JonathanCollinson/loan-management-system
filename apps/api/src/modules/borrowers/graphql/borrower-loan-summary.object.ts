@@ -1,4 +1,10 @@
-import { Field, Float, ID, ObjectType, registerEnumType } from '@nestjs/graphql';
+import {
+  Field,
+  Float,
+  ID,
+  ObjectType,
+  registerEnumType,
+} from '@nestjs/graphql';
 import { BorrowerLoanSummaryStatus } from '../../../common/enums/borrower-loan-summary-status.enum';
 
 registerEnumType(BorrowerLoanSummaryStatus, {

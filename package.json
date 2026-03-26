@@ -9,6 +9,7 @@
     "build": "pnpm --filter @lms/api run build && pnpm --filter @lms/web run build",
     "test": "pnpm --filter @lms/api run test",
     "test:e2e": "pnpm --filter @lms/web run test:e2e",
+    "lint": "pnpm --filter @lms/api run lint && pnpm --filter @lms/web run lint",
     "prepare": "husky"
   },
   "engines": {
@@ -17,6 +18,7 @@
   "devDependencies": {
     "@commitlint/cli": "^20.5.0",
     "@commitlint/config-conventional": "^20.5.0",
-    "husky": "^9.1.7"
+    "husky": "^9.1.7",
+    "lint-staged": "^15.4.3"
   }
 }

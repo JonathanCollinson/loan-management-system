@@ -44,7 +44,9 @@ export class UsersResolver {
 
   @Mutation(() => UserObject)
   @Roles(UserRole.SUPER_ADMIN)
-  async createAdmin(@Args('input') input: CreateAdminInput): Promise<UserObject> {
+  async createAdmin(
+    @Args('input') input: CreateAdminInput,
+  ): Promise<UserObject> {
     return this.usersService.createAdmin(input);
   }
 
@@ -54,6 +56,6 @@ export class UsersResolver {
     @Args('input') input: UpdateUserInput,
     @CurrentUser() actor: JwtUser,
   ): Promise<UserObject> {
-    return this.usersService.updateUser(input, actor.role as UserRole);
+    return this.usersService.updateUser(input, actor.role);
   }
 }

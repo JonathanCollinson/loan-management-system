@@ -55,10 +55,7 @@ export class FundingRepository {
               {
                 $and: [
                   {
-                    $or: [
-                      { period: null },
-                      { period: { $exists: false } },
-                    ],
+                    $or: [{ period: null }, { period: { $exists: false } }],
                   },
                   { createdAt: { $gte: start, $lte: end } },
                 ],

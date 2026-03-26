@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { Types } from 'mongoose';
 import { UserRole } from '../../common/enums/user-role.enum';
 import type { JwtUser } from '../../common/types/jwt-user';
 import { parseMonth } from '../../common/utils/month-range.util';
 import { LoansRepository } from '../loans/loans.repository';
 import { RepaymentsRepository } from '../repayments/repayments.repository';
+import type { RepaymentDocument } from '../repayments/schemas/repayment.schema';
 import { MonthlyReport } from './graphql/monthly-report.object';
 
 @Injectable()
@@ -16,17 +16,15 @@ export class ReportsService {
 
   async monthlyReport(month: string, actor: JwtUser): Promise<MonthlyReport> {
     const { start, end } = parseMonth(month);
-    const owner =
-      actor.role === UserRole.USER ? actor.id : undefined;
+    const owner = actor.role === UserRole.USER ? actor.id : undefined;
 
     const loans = await this.loansRepo.findCreatedBetween(start, end, owner);
     const principalLoaned = loans.reduce((s, l) => s + l.principalAmount, 0);
 
-    let repayments;
+    let repayments: RepaymentDocument[];
     if (owner) {
-      const loanIds = loans.map((l) => l._id as Types.ObjectId);
       const allOwnerLoans = await this.loansRepo.findByOwner(owner);
-      const allIds = allOwnerLoans.map((l) => l._id as Types.ObjectId);
+      const allIds = allOwnerLoans.map((l) => l._id);
       repayments = await this.repaymentsRepo.findPaymentsBetween(
         start,
         end,

@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectConnection } from '@nestjs/mongoose';
 import { Connection, Types } from 'mongoose';
 import { LoanStatus } from '../../common/enums/loan-status.enum';
@@ -99,14 +103,14 @@ export class RepaymentsService {
       await session.abortTransaction();
       throw e;
     } finally {
-      session.endSession();
+      await session.endSession();
     }
   }
 
   async listRepayments(actor: JwtUser): Promise<RepaymentObject[]> {
     if (actor.role === UserRole.USER) {
       const loans = await this.loansRepo.findByOwner(actor.id);
-      const loanIds = loans.map((l) => l._id as Types.ObjectId);
+      const loanIds = loans.map((l) => l._id);
       const docs = await this.repaymentsRepo.findByOwnerLoanIds(loanIds);
       return docs.map((d) => this.toObject(d));
     }

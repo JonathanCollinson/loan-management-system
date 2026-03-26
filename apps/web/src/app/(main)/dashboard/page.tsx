@@ -2,6 +2,8 @@
 
 import { gql } from '@apollo/client';
 import { useQuery } from '@apollo/client/react';
+import Link from 'next/link';
+import { useState } from 'react';
 import {
   Bar,
   BarChart,
@@ -11,6 +13,14 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+
+const ME = gql`
+  query DashboardMe {
+    me {
+      role
+    }
+  }
+`;
 
 const DASH = gql`
   query Dashboard {
@@ -24,8 +34,35 @@ const DASH = gql`
   }
 `;
 
+const BORROWER_SUMMARY = gql`
+  query UserDashboardBorrowerSummary($month: String!) {
+    borrowerLoanSummary(month: $month) {
+      rows {
+        borrowerStatus
+      }
+      totals {
+        totalPrincipal
+        totalInterest
+        totalRepayable
+      }
+    }
+  }
+`;
+
+function currentMonthValue(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  return `${y}-${m}`;
+}
+
 export default function DashboardPage() {
-  const { data, loading, error } = useQuery<{
+  const { data: meData, loading: meLoading, error: meError } = useQuery<{
+    me: { role: string };
+  }>(ME);
+  const role = meData?.me?.role;
+
+  const { data: dashData, loading: dashLoading, error: dashError } = useQuery<{
     dashboard: {
       totalPrincipalLoaned: number;
       totalInterestExpected: number;
@@ -33,16 +70,115 @@ export default function DashboardPage() {
       totalCollected: number;
       activeLoansCount: number;
     };
-  }>(DASH);
+  }>(DASH, {
+    skip: !role || role === 'USER',
+  });
 
-  if (loading) {
+  const [month, setMonth] = useState(currentMonthValue);
+  const { data: summaryData, loading: summaryLoading, error: summaryError } =
+    useQuery<{
+      borrowerLoanSummary: {
+        rows: { borrowerStatus: string }[];
+        totals: {
+          totalPrincipal: number;
+          totalInterest: number;
+          totalRepayable: number;
+        };
+      };
+    }>(BORROWER_SUMMARY, {
+      skip: !role || role !== 'USER',
+      variables: { month },
+    });
+
+  if (meLoading) {
     return <p className="text-zinc-500">Loading dashboard…</p>;
   }
-  if (error) {
-    return <p className="text-red-600">{error.message}</p>;
+  if (meError) {
+    return <p className="text-red-600">{meError.message}</p>;
   }
 
-  const d = data?.dashboard;
+  if (role === 'USER') {
+    if (summaryLoading) {
+      return <p className="text-zinc-500">Loading dashboard…</p>;
+    }
+    if (summaryError) {
+      return <p className="text-red-600">{summaryError.message}</p>;
+    }
+
+    const rows = summaryData?.borrowerLoanSummary.rows ?? [];
+    const totals = summaryData?.borrowerLoanSummary.totals;
+    const borrowersWithLoans = rows.filter(
+      (r) => r.borrowerStatus !== 'NO_LOANS',
+    ).length;
+
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+              Dashboard
+            </h1>
+            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+              Loan activity for the selected month (loans created in that
+              calendar month).
+            </p>
+          </div>
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-zinc-600 dark:text-zinc-400">Month</span>
+              <input
+                type="month"
+                className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-600 dark:bg-zinc-900"
+                value={month}
+                onChange={(e) => setMonth(e.target.value)}
+              />
+            </label>
+            <button
+              type="button"
+              className="rounded border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-600"
+              onClick={() => setMonth(currentMonthValue())}
+            >
+              Current month
+            </button>
+            <Link
+              href="/borrowers/summary"
+              className="rounded border border-zinc-300 px-3 py-1.5 text-sm text-blue-600 hover:underline dark:border-zinc-600 dark:text-blue-400"
+            >
+              Full table
+            </Link>
+          </div>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard
+            label="Borrowers with loans"
+            value={borrowersWithLoans}
+            format="int"
+          />
+          <StatCard
+            label="Total principal"
+            value={totals?.totalPrincipal ?? 0}
+          />
+          <StatCard
+            label="Total interest"
+            value={totals?.totalInterest ?? 0}
+          />
+          <StatCard
+            label="Total with interest"
+            value={totals?.totalRepayable ?? 0}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (dashLoading) {
+    return <p className="text-zinc-500">Loading dashboard…</p>;
+  }
+  if (dashError) {
+    return <p className="text-red-600">{dashError.message}</p>;
+  }
+
+  const d = dashData?.dashboard;
   const chart = [
     { name: 'Principal loaned', value: d?.totalPrincipalLoaned ?? 0 },
     { name: 'Interest (expected)', value: d?.totalInterestExpected ?? 0 },
@@ -94,11 +230,11 @@ function StatCard({
   label,
   value,
   format = 'money',
-}: {
+}: Readonly<{
   label: string;
   value: number;
   format?: 'money' | 'int';
-}) {
+}>) {
   const display =
     format === 'int'
       ? String(Math.round(value))

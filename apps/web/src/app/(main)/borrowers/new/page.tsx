@@ -28,8 +28,7 @@ export default function NewBorrowerPage() {
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [idDocument, setIdDocument] = useState('');
+  const [address, setAddress] = useState('');
   const [ownerUserId, setOwnerUserId] = useState('');
   const [create, { loading }] = useMutation<{
     createBorrower: { id: string };
@@ -39,9 +38,8 @@ export default function NewBorrowerPage() {
     e.preventDefault();
     const input: Record<string, string | undefined> = {
       name,
+      address,
       phone: phone || undefined,
-      email: email || undefined,
-      idDocument: idDocument || undefined,
     };
     if (role === 'ADMIN' || role === 'SUPER_ADMIN') {
       input.ownerUserId = ownerUserId;
@@ -57,15 +55,23 @@ export default function NewBorrowerPage() {
       <form onSubmit={onSubmit} className="flex flex-col gap-3">
         <Field label="Name" value={name} onChange={setName} required />
         <Field label="Phone" value={phone} onChange={setPhone} />
-        <Field label="Email" value={email} onChange={setEmail} type="email" />
-        <Field label="ID document" value={idDocument} onChange={setIdDocument} />
+        <label className="text-sm">
+          <span className="text-zinc-700 dark:text-zinc-300">Address</span>
+          <textarea
+            required
+            rows={3}
+            className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+          />
+        </label>
         {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
           <Field
             label="Field user ID (owner)"
             value={ownerUserId}
             onChange={setOwnerUserId}
             required
-              hint="Mongo ObjectId of the USER who will own this borrower."
+            hint="Mongo ObjectId of the USER who will own this borrower."
           />
         )}
         <button

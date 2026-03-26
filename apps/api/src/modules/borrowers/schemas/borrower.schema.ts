@@ -12,9 +12,14 @@ export class Borrower {
   @Prop({ trim: true })
   phone?: string;
 
+  @Prop({ trim: true, default: '' })
+  address: string;
+
+  /** @deprecated Legacy; not exposed on GraphQL */
   @Prop({ trim: true, lowercase: true })
   email?: string;
 
+  /** @deprecated Legacy; not exposed on GraphQL */
   @Prop({ trim: true })
   idDocument?: string;
 

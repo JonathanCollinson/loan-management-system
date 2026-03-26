@@ -1,5 +1,5 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsEmail, IsOptional, IsString } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
 
 @InputType()
 export class UpdateBorrowerInput {
@@ -19,11 +19,6 @@ export class UpdateBorrowerInput {
 
   @Field({ nullable: true })
   @IsOptional()
-  @IsEmail()
-  email?: string;
-
-  @Field({ nullable: true })
-  @IsOptional()
   @IsString()
-  idDocument?: string;
+  address?: string;
 }

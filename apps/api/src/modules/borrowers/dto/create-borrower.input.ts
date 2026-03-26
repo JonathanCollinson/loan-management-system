@@ -1,10 +1,11 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsEmail, IsOptional, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 @InputType()
 export class CreateBorrowerInput {
   @Field()
   @IsString()
+  @IsNotEmpty()
   name: string;
 
   @Field({ nullable: true })
@@ -12,15 +13,10 @@ export class CreateBorrowerInput {
   @IsString()
   phone?: string;
 
-  @Field({ nullable: true })
-  @IsOptional()
-  @IsEmail()
-  email?: string;
-
-  @Field({ nullable: true })
-  @IsOptional()
+  @Field()
   @IsString()
-  idDocument?: string;
+  @IsNotEmpty()
+  address: string;
 
   /** Required when caller is ADMIN or SUPER_ADMIN — field user who owns this borrower. */
   @Field({ nullable: true })

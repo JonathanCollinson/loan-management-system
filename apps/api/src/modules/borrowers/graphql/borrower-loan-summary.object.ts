@@ -34,8 +34,8 @@ export class BorrowerLoanSummaryRow {
   @Field({ nullable: true })
   phone?: string;
 
-  @Field({ nullable: true })
-  email?: string;
+  @Field()
+  address: string;
 
   @Field(() => Float)
   totalPrincipal: number;

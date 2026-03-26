@@ -35,8 +35,7 @@ export class BorrowersService {
       id: doc._id.toString(),
       name: doc.name,
       phone: doc.phone,
-      email: doc.email,
-      idDocument: doc.idDocument,
+      address: doc.address ?? '',
       createdByUserId: doc.createdByUserId.toString(),
     };
   }
@@ -74,8 +73,7 @@ export class BorrowersService {
     const doc = await this.repo.create({
       name: input.name,
       phone: input.phone,
-      email: input.email,
-      idDocument: input.idDocument,
+      address: input.address,
       createdByUserId: new Types.ObjectId(ownerId),
     });
     return this.toObject(doc);
@@ -116,8 +114,7 @@ export class BorrowersService {
     const data: Record<string, unknown> = {};
     if (input.name !== undefined) data.name = input.name;
     if (input.phone !== undefined) data.phone = input.phone;
-    if (input.email !== undefined) data.email = input.email;
-    if (input.idDocument !== undefined) data.idDocument = input.idDocument;
+    if (input.address !== undefined) data.address = input.address;
 
     const updated = await this.repo.updateById(input.borrowerId, data);
     if (!updated) throw new NotFoundException('Borrower not found');
@@ -180,7 +177,7 @@ export class BorrowersService {
         borrowerId: doc._id.toString(),
         name: doc.name,
         phone: doc.phone,
-        email: doc.email,
+        address: doc.address ?? '',
         totalPrincipal: summary.totalPrincipal,
         totalInterest: summary.totalInterest,
         totalRepayable: summary.totalRepayable,

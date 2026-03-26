@@ -17,7 +17,7 @@ const Q = gql`
         borrowerId
         name
         phone
-        email
+        address
         totalPrincipal
         totalInterest
         totalRepayable
@@ -40,7 +40,7 @@ type Row = {
   borrowerId: string;
   name: string;
   phone?: string | null;
-  email?: string | null;
+  address: string;
   totalPrincipal: number;
   totalInterest: number;
   totalRepayable: number;
@@ -102,9 +102,9 @@ export default function BorrowerLoanSummaryPage() {
         header: 'Phone',
         cell: (ctx) => ctx.getValue() ?? '—',
       }),
-      columnHelper.accessor('email', {
-        header: 'Email',
-        cell: (ctx) => ctx.getValue() ?? '—',
+      columnHelper.accessor('address', {
+        header: 'Address',
+        cell: (ctx) => ctx.getValue() || '—',
       }),
       columnHelper.accessor('totalPrincipal', {
         header: 'Principal',

@@ -11,11 +11,8 @@ export class BorrowerObject {
   @Field({ nullable: true })
   phone?: string;
 
-  @Field({ nullable: true })
-  email?: string;
-
-  @Field({ nullable: true })
-  idDocument?: string;
+  @Field()
+  address: string;
 
   @Field(() => ID)
   createdByUserId: string;

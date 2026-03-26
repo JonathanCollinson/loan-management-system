@@ -17,7 +17,7 @@ const Q = gql`
       id
       name
       phone
-      email
+      address
       createdByUserId
     }
   }
@@ -27,7 +27,7 @@ type Row = {
   id: string;
   name: string;
   phone?: string | null;
-  email?: string | null;
+  address: string;
   createdByUserId: string;
 };
 
@@ -43,8 +43,14 @@ export default function BorrowersPage() {
   const columns = useMemo(
     () => [
       columnHelper.accessor('name', { header: 'Name' }),
-      columnHelper.accessor('phone', { header: 'Phone' }),
-      columnHelper.accessor('email', { header: 'Email' }),
+      columnHelper.accessor('phone', {
+        header: 'Phone',
+        cell: (ctx) => ctx.getValue() ?? '—',
+      }),
+      columnHelper.accessor('address', {
+        header: 'Address',
+        cell: (ctx) => ctx.getValue() || '—',
+      }),
       columnHelper.display({
         id: 'actions',
         header: '',

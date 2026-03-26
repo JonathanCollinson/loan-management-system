@@ -12,8 +12,7 @@ const Q = gql`
       id
       name
       phone
-      email
-      idDocument
+      address
       createdByUserId
     }
   }
@@ -35,8 +34,7 @@ export default function BorrowerDetailPage() {
       id: string;
       name: string;
       phone?: string | null;
-      email?: string | null;
-      idDocument?: string | null;
+      address: string;
     };
   }>(Q, { variables: { id } });
   const [mutate] = useMutation(UPDATE);
@@ -44,15 +42,13 @@ export default function BorrowerDetailPage() {
   const b = data?.borrower;
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [idDocument, setIdDocument] = useState('');
+  const [address, setAddress] = useState('');
 
   useEffect(() => {
     if (b) {
       setName(b.name);
       setPhone(b.phone ?? '');
-      setEmail(b.email ?? '');
-      setIdDocument(b.idDocument ?? '');
+      setAddress(b.address ?? '');
     }
   }, [b]);
 
@@ -64,8 +60,7 @@ export default function BorrowerDetailPage() {
           borrowerId: id,
           name,
           phone: phone || undefined,
-          email: email || undefined,
-          idDocument: idDocument || undefined,
+          address,
         },
       },
     });
@@ -102,20 +97,13 @@ export default function BorrowerDetailPage() {
           />
         </label>
         <label className="text-sm">
-          Email
-          <input
-            type="email"
+          Address
+          <textarea
+            required
+            rows={3}
             className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </label>
-        <label className="text-sm">
-          ID document
-          <input
-            className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
-            value={idDocument}
-            onChange={(e) => setIdDocument(e.target.value)}
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
           />
         </label>
         <button

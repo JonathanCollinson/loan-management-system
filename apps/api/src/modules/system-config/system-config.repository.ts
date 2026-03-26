@@ -32,7 +32,7 @@ export class SystemConfigRepository {
           $set: { defaultInterestRate: rate },
           $setOnInsert: { singletonKey: 'global' },
         },
-        { new: true, upsert: true },
+        { returnDocument: 'after', upsert: true },
       )
       .exec();
     if (!doc) {

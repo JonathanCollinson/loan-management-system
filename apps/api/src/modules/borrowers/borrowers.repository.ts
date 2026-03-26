@@ -36,6 +36,8 @@ export class BorrowersRepository {
     data: Partial<Borrower>,
   ): Promise<BorrowerDocument | null> {
     if (!Types.ObjectId.isValid(id)) return null;
-    return this.borrowerModel.findByIdAndUpdate(id, data, { new: true }).exec();
+    return this.borrowerModel
+      .findByIdAndUpdate(id, data, { returnDocument: 'after' })
+      .exec();
   }
 }

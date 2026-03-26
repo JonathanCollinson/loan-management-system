@@ -40,7 +40,9 @@ export class UsersRepository {
     data: Partial<User>,
   ): Promise<UserDocument | null> {
     if (!Types.ObjectId.isValid(id)) return null;
-    return this.userModel.findByIdAndUpdate(id, data, { new: true }).exec();
+    return this.userModel
+      .findByIdAndUpdate(id, data, { returnDocument: 'after' })
+      .exec();
   }
 
   async incrementWallet(
@@ -52,7 +54,7 @@ export class UsersRepository {
     const q = this.userModel.findByIdAndUpdate(
       userId,
       { $inc: { walletBalance: delta } },
-      { new: true },
+      { returnDocument: 'after' },
     );
     if (session) {
       q.session(session);
@@ -75,7 +77,7 @@ export class UsersRepository {
         walletBalance: { $gte: amount },
       },
       { $inc: { walletBalance: -amount } },
-      { new: true },
+      { returnDocument: 'after' },
     );
     if (session) {
       q.session(session);

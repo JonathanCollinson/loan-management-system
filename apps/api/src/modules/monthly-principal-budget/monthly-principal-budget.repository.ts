@@ -37,7 +37,11 @@ export class MonthlyPrincipalBudgetRepository {
     const q = this.budgetModel.findOneAndUpdate(
       { month },
       { $set: { totalPrincipal, ...(note !== undefined ? { note } : {}) } },
-      { new: true, upsert: true, setDefaultsOnInsert: true },
+      {
+        returnDocument: 'after',
+        upsert: true,
+        setDefaultsOnInsert: true,
+      },
     );
     if (session) q.session(session);
     const doc = await q.exec();

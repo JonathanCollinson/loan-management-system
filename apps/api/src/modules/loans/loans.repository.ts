@@ -62,7 +62,9 @@ export class LoansRepository {
     session?: ClientSession,
   ): Promise<LoanDocument | null> {
     if (!Types.ObjectId.isValid(id)) return null;
-    const q = this.loanModel.findByIdAndUpdate(id, data, { new: true });
+    const q = this.loanModel.findByIdAndUpdate(id, data, {
+      returnDocument: 'after',
+    });
     if (session) q.session(session);
     return q.exec();
   }

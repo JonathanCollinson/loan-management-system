@@ -6,14 +6,15 @@ import { seedE2EUsers } from './helpers/graphql';
 const authDir = join(process.cwd(), 'e2e', '.auth');
 
 function creds() {
+  // Defaults align with repo `.env.example` and `playwright.config` localApiEnv; CI sets SEED_* in the job env.
   const superAdminEmail =
     process.env.E2E_SUPER_ADMIN_EMAIL ??
     process.env.SEED_SUPER_ADMIN_EMAIL ??
-    'ci@example.com';
+    'admin@example.com';
   const superAdminPassword =
     process.env.E2E_SUPER_ADMIN_PASSWORD ??
     process.env.SEED_SUPER_ADMIN_PASSWORD ??
-    'CiPassword123!';
+    'ChangeMe123!';
   const adminEmail = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@local.test';
   const adminPassword = process.env.E2E_ADMIN_PASSWORD ?? 'E2eTest123!';
   const userEmail = process.env.E2E_USER_EMAIL ?? 'e2e-user@local.test';

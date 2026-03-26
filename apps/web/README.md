@@ -27,7 +27,7 @@ pnpm --filter @lms/web run dev
 | `pnpm --filter @lms/web run start` | Serve production build |
 | `pnpm --filter @lms/web run lint` | ESLint |
 | `pnpm --filter @lms/web run test` | Jest unit tests (Testing Library) |
-| `pnpm --filter @lms/web run test:e2e` | Playwright tests (with `CI=true`, builds API + web and starts both; locally, start Mongo + API and reuse dev server on port 3000) |
+| `pnpm --filter @lms/web run test:e2e` | Playwright tests (starts Mongo-backed API on :4000 and Next dev on :3000; reuses existing servers if already running. Requires MongoDB; use `SEED_SUPER_ADMIN_*` / E2E env vars if your seed differs from `.env.example`) |
 
 ## Environment
 

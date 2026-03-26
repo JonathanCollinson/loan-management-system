@@ -15,6 +15,18 @@ const ciApiEnv = {
   PORT: '4000',
 };
 
+/** Same seed/JWT/Mongo contract as local dev (see repo root `.env.example`). */
+const localApiEnv = {
+  ...process.env,
+  MONGODB_URI: process.env.MONGODB_URI ?? 'mongodb://127.0.0.1:27017/lms',
+  JWT_SECRET: process.env.JWT_SECRET ?? 'change-me-in-production-use-long-random-string',
+  SEED_SUPER_ADMIN_EMAIL:
+    process.env.SEED_SUPER_ADMIN_EMAIL ?? 'admin@example.com',
+  SEED_SUPER_ADMIN_PASSWORD:
+    process.env.SEED_SUPER_ADMIN_PASSWORD ?? 'ChangeMe123!',
+  PORT: '4000',
+};
+
 const ciWebServers = [
   {
     command: 'pnpm run start:prod',
@@ -37,13 +49,31 @@ const ciWebServers = [
   },
 ];
 
-const localWebServer = {
-  command: 'pnpm run dev',
-  cwd: path.join(repoRoot, 'apps', 'web'),
-  url: baseURL,
-  reuseExistingServer: true,
-  timeout: 120_000,
-};
+/**
+ * Local E2E must start the API too: `auth.setup.ts` seeds users via GraphQL before
+ * browser tests. If you already run the API on :4000 (`pnpm run dev:api`), it is reused.
+ */
+const localWebServers = [
+  {
+    command: 'pnpm run start',
+    cwd: path.join(repoRoot, 'apps', 'api'),
+    port: 4000,
+    reuseExistingServer: true,
+    timeout: 120_000,
+    env: localApiEnv,
+  },
+  {
+    command: 'pnpm run dev',
+    cwd: path.join(repoRoot, 'apps', 'web'),
+    url: baseURL,
+    reuseExistingServer: true,
+    timeout: 120_000,
+    env: {
+      ...process.env,
+      NEXT_PUBLIC_GRAPHQL_URL: 'http://127.0.0.1:4000/graphql',
+    },
+  },
+];
 
 export default defineConfig({
   testDir: 'e2e',
@@ -86,5 +116,5 @@ export default defineConfig({
       },
     },
   ],
-  webServer: process.env.CI ? ciWebServers : localWebServer,
+  webServer: process.env.CI ? ciWebServers : localWebServers,
 });

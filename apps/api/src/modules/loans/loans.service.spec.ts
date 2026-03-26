@@ -180,4 +180,49 @@ describe('LoansService', () => {
       mockSession,
     );
   });
+
+  it('createLoan ignores input interestRate for USER (uses system default)', async () => {
+    borrowersRepo.findById.mockResolvedValue({
+      createdByUserId: ownerId,
+    });
+    usersRepo.decrementWalletIfGte.mockResolvedValue(true);
+    loansRepo.create.mockResolvedValue({
+      _id: new Types.ObjectId(),
+      borrowerId,
+      ownerUserId: ownerId,
+      principalAmount: 100,
+      interestRate: 10,
+      interestType: InterestType.FLAT,
+      interestAmount: 10,
+      totalAmount: 110,
+      termMonths: 3,
+      startDate: new Date(),
+      endDate: new Date(),
+      monthlyInstallment: 110 / 3,
+      status: LoanStatus.ACTIVE,
+      totalPaid: 0,
+      outstandingAmount: 110,
+    });
+
+    await service.createLoan(
+      {
+        borrowerId: borrowerId.toString(),
+        principalAmount: 100,
+        interestType: InterestType.FLAT,
+        termMonths: 3,
+        interestRate: 99,
+      },
+      {
+        id: ownerId.toString(),
+        email: 'u@test',
+        role: UserRole.USER,
+      },
+    );
+
+    expect(systemConfig.getDefaultInterestRate).toHaveBeenCalled();
+    expect(loansRepo.create).toHaveBeenCalledWith(
+      expect.objectContaining({ interestRate: 10 }),
+      mockSession,
+    );
+  });
 });

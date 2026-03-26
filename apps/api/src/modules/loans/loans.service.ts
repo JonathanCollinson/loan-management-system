@@ -108,8 +108,13 @@ export class LoansService {
     }
 
     const principal = input.principalAmount;
-    let interestRate = input.interestRate;
-    if (interestRate === undefined || interestRate === null) {
+    let interestRate: number;
+    if (actor.role === UserRole.SUPER_ADMIN) {
+      interestRate =
+        input.interestRate != null
+          ? input.interestRate
+          : await this.systemConfigService.getDefaultInterestRate();
+    } else {
       interestRate = await this.systemConfigService.getDefaultInterestRate();
     }
     const interestAmount = principal * (interestRate / 100);

@@ -3,13 +3,25 @@
 import { gql } from '@apollo/client';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { SearchableSelect } from '@/components/searchable-select';
 
 const ME = gql`
   query MeNewLoan {
     me {
       role
       walletBalance
+    }
+  }
+`;
+
+const BORROWERS = gql`
+  query BorrowersForLoan {
+    borrowers {
+      id
+      name
+      phone
+      address
     }
   }
 `;
@@ -37,6 +49,14 @@ export default function NewLoanPage() {
   }>(ME);
   const role = meData?.me?.role;
   const wallet = meData?.me?.walletBalance;
+  const { data: borrowersData } = useQuery<{
+    borrowers: {
+      id: string;
+      name: string;
+      phone?: string | null;
+      address: string;
+    }[];
+  }>(BORROWERS);
   const { data: cfg } = useQuery<{
     systemConfig: { defaultInterestRate: number };
   }>(CFG);
@@ -46,21 +66,37 @@ export default function NewLoanPage() {
   const [termMonths, setTermMonths] = useState('3');
   const [create, { loading }] = useMutation<{ createLoan: { id: string } }>(M);
 
+  const canSetLoanRate = role === 'SUPER_ADMIN';
+  const defaultRate = cfg?.systemConfig?.defaultInterestRate;
+
+  const borrowerOptions = useMemo(
+    () =>
+      (borrowersData?.borrowers ?? []).map((b) => ({
+        value: b.id,
+        label: `${b.name} — ${b.address || 'No address'}`,
+        searchText: `${b.name} ${b.address ?? ''} ${b.phone ?? ''} ${b.id}`,
+      })),
+    [borrowersData],
+  );
+
   useEffect(() => {
-    if (cfg?.systemConfig?.defaultInterestRate != null) {
-      setInterestRate(String(cfg.systemConfig.defaultInterestRate));
+    if (defaultRate != null) {
+      setInterestRate(String(defaultRate));
     }
-  }, [cfg]);
+  }, [defaultRate]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!borrowerId) return;
     const rate = parseFloat(interestRate);
     const res = await create({
       variables: {
         input: {
           borrowerId,
           principalAmount: parseFloat(principalAmount),
-          ...(Number.isFinite(rate) ? { interestRate: rate } : {}),
+          ...(canSetLoanRate && Number.isFinite(rate)
+            ? { interestRate: rate }
+            : {}),
           interestType: 'FLAT',
           termMonths: parseInt(termMonths, 10),
         },
@@ -94,12 +130,14 @@ export default function NewLoanPage() {
       )}
       <form onSubmit={onSubmit} className="flex flex-col gap-3">
         <label className="text-sm">
-          Borrower ID
-          <input
-            required
-            className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 font-mono text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          Borrower
+          <SearchableSelect
+            id="loan-borrower"
+            aria-label="Borrower"
             value={borrowerId}
-            onChange={(e) => setBorrowerId(e.target.value)}
+            onChange={setBorrowerId}
+            options={borrowerOptions}
+            emptyLabel="Search borrowers by name or address…"
           />
         </label>
         <label className="text-sm">
@@ -113,17 +151,38 @@ export default function NewLoanPage() {
             onChange={(e) => setPrincipalAmount(e.target.value)}
           />
         </label>
-        <label className="text-sm">
-          Interest rate (% flat)
-          <input
-            type="number"
-            step="0.01"
-            className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
-            value={interestRate}
-            onChange={(e) => setInterestRate(e.target.value)}
-            placeholder="Uses system default if empty"
-          />
-        </label>
+        {canSetLoanRate ? (
+          <label className="text-sm">
+            Interest rate (% flat)
+            <input
+              type="number"
+              step="0.01"
+              className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+              value={interestRate}
+              onChange={(e) => setInterestRate(e.target.value)}
+              placeholder="Uses system default if empty"
+            />
+            <span className="mt-1 block text-xs text-zinc-500">
+              Optional override for this loan; leave empty to use the system
+              default from Settings.
+            </span>
+          </label>
+        ) : (
+          <div className="text-sm">
+            <p className="font-medium text-zinc-700 dark:text-zinc-300">
+              Interest rate (% flat)
+            </p>
+            <p className="mt-1 rounded border border-zinc-200 bg-zinc-50 px-3 py-2 tabular-nums text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100">
+              {defaultRate != null
+                ? `${Number(defaultRate).toFixed(2)}%`
+                : '…'}
+            </p>
+            <p className="mt-1 text-xs text-zinc-500">
+              Set system-wide by Super Admin under Settings. You cannot change it
+              here.
+            </p>
+          </div>
+        )}
         <label className="text-sm">
           Term (months)
           <input
@@ -137,7 +196,7 @@ export default function NewLoanPage() {
         </label>
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || !borrowerId}
           className="rounded bg-zinc-900 py-2 text-white dark:bg-zinc-100 dark:text-zinc-900"
         >
           {loading ? 'Creating…' : 'Create loan'}

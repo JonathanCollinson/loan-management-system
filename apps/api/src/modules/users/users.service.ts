@@ -153,6 +153,16 @@ export class UsersService implements OnModuleInit {
     return docs.map((d) => this.toObject(d));
   }
 
+  /** Field users, admins, and super admins (valid funding recipients). */
+  async listFundingRecipients(): Promise<UserObject[]> {
+    const docs = await this.repo.findByRoles([
+      UserRole.USER,
+      UserRole.ADMIN,
+      UserRole.SUPER_ADMIN,
+    ]);
+    return docs.map((d) => this.toObject(d));
+  }
+
   async assertUserIsFieldAgent(userId: string): Promise<UserDocument> {
     const u = await this.repo.findById(userId);
     if (!u || u.role !== UserRole.USER) {

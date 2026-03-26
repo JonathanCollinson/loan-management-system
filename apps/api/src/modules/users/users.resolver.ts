@@ -33,6 +33,12 @@ export class UsersResolver {
     return this.usersService.listAdmins();
   }
 
+  @Query(() => [UserObject])
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  async listFundingRecipients(): Promise<UserObject[]> {
+    return this.usersService.listFundingRecipients();
+  }
+
   @Mutation(() => UserObject)
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   async createFieldUser(

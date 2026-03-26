@@ -35,6 +35,13 @@ export class UsersRepository {
     return this.userModel.find({ role }).sort({ createdAt: -1 }).exec();
   }
 
+  async findByRoles(roles: UserRole[]): Promise<UserDocument[]> {
+    return this.userModel
+      .find({ role: { $in: roles } })
+      .sort({ name: 1 })
+      .exec();
+  }
+
   async updateById(
     id: string,
     data: Partial<User>,

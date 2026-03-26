@@ -3,6 +3,7 @@
 import { gql } from '@apollo/client';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { useMemo, useState } from 'react';
+import { SearchableSelect } from '@/components/searchable-select';
 
 const LIST = gql`
   query FundingTransfers {
@@ -59,6 +60,17 @@ const UTIL = gql`
   }
 `;
 
+const RECIPIENTS = gql`
+  query FundingRecipients {
+    listFundingRecipients {
+      id
+      name
+      email
+      role
+    }
+  }
+`;
+
 const RECORD = gql`
   mutation RecordFunding($input: RecordFundingInput!) {
     recordFunding(input: $input) {
@@ -77,6 +89,19 @@ const fmt = (n: number) =>
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+
+const roleLabel = (r: string) => {
+  switch (r) {
+    case 'USER':
+      return 'Field user';
+    case 'ADMIN':
+      return 'Admin';
+    case 'SUPER_ADMIN':
+      return 'Super admin';
+    default:
+      return r;
+  }
+};
 
 export default function FundingPage() {
   const [reportMonth, setReportMonth] = useState(currentMonth);
@@ -120,12 +145,31 @@ export default function FundingPage() {
     };
   }>(UTIL, { variables: { month: reportMonth } });
 
+  const { data: recipientsData } = useQuery<{
+    listFundingRecipients: {
+      id: string;
+      name: string;
+      email: string;
+      role: string;
+    }[];
+  }>(RECIPIENTS);
+
   const [record, { loading: saving }] = useMutation(RECORD);
 
   const [recipientUserId, setRecipientUserId] = useState('');
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
   const [period, setPeriod] = useState(currentMonth);
+
+  const recipientOptions = useMemo(
+    () =>
+      (recipientsData?.listFundingRecipients ?? []).map((u) => ({
+        value: u.id,
+        label: `${u.name} (${u.email}) — ${roleLabel(u.role)}`,
+        searchText: `${u.name} ${u.email} ${u.id} ${u.role}`,
+      })),
+    [recipientsData],
+  );
 
   const utilRows = utilData?.fundingUtilization.rows ?? [];
   const utilTotals = utilData?.fundingUtilization.totals;
@@ -134,6 +178,7 @@ export default function FundingPage() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!recipientUserId) return;
     await record({
       variables: {
         input: {
@@ -268,17 +313,20 @@ export default function FundingPage() {
         >
           <h2 className="font-medium">Record funding (wallet credit)</h2>
           <p className="text-xs text-zinc-500">
-            Paste the recipient&apos;s user ID. Use Funding period (YYYY-MM) to
-            tag the month; required for budget checks when a monthly ceiling is
-            set.
+            Choose the recipient. Use Funding period (YYYY-MM) to tag the month;
+            required for budget checks when a monthly ceiling is set.
           </p>
-          <input
-            required
-            placeholder="Recipient user ID"
-            className="w-full rounded border px-3 py-2 font-mono text-sm dark:border-zinc-700 dark:bg-zinc-900"
-            value={recipientUserId}
-            onChange={(e) => setRecipientUserId(e.target.value)}
-          />
+          <label className="block text-sm">
+            Recipient
+            <SearchableSelect
+              id="funding-recipient"
+              aria-label="Recipient user"
+              value={recipientUserId}
+              onChange={setRecipientUserId}
+              options={recipientOptions}
+              emptyLabel="Search by name or email…"
+            />
+          </label>
           <input
             required
             type="number"
@@ -305,7 +353,7 @@ export default function FundingPage() {
           />
           <button
             type="submit"
-            disabled={saving}
+            disabled={saving || !recipientUserId}
             className="rounded bg-zinc-900 px-4 py-2 text-sm text-white dark:bg-zinc-100 dark:text-zinc-900"
           >
             {saving ? 'Saving…' : 'Record funding'}

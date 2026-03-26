@@ -1,0 +1,130 @@
+'use client';
+
+import { gql } from '@apollo/client';
+import { useMutation, useQuery } from '@apollo/client/react';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
+
+const Q = gql`
+  query Borrower($id: String!) {
+    borrower(id: $id) {
+      id
+      name
+      phone
+      email
+      idDocument
+      createdByUserId
+    }
+  }
+`;
+
+const UPDATE = gql`
+  mutation UpdateBorrower($input: UpdateBorrowerInput!) {
+    updateBorrower(input: $input) {
+      id
+    }
+  }
+`;
+
+export default function BorrowerDetailPage() {
+  const params = useParams();
+  const id = params.id as string;
+  const { data, loading, refetch } = useQuery<{
+    borrower: {
+      id: string;
+      name: string;
+      phone?: string | null;
+      email?: string | null;
+      idDocument?: string | null;
+    };
+  }>(Q, { variables: { id } });
+  const [mutate] = useMutation(UPDATE);
+
+  const b = data?.borrower;
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [idDocument, setIdDocument] = useState('');
+
+  useEffect(() => {
+    if (b) {
+      setName(b.name);
+      setPhone(b.phone ?? '');
+      setEmail(b.email ?? '');
+      setIdDocument(b.idDocument ?? '');
+    }
+  }, [b]);
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    await mutate({
+      variables: {
+        input: {
+          borrowerId: id,
+          name,
+          phone: phone || undefined,
+          email: email || undefined,
+          idDocument: idDocument || undefined,
+        },
+      },
+    });
+    refetch();
+  }
+
+  if (loading || !b) {
+    return <p className="text-zinc-500">Loading…</p>;
+  }
+
+  return (
+    <div className="mx-auto max-w-md space-y-6">
+      <div className="flex items-center gap-4">
+        <Link href="/borrowers" className="text-sm text-blue-600">
+          ← Borrowers
+        </Link>
+      </div>
+      <h1 className="text-2xl font-semibold">{b.name}</h1>
+      <form onSubmit={onSubmit} className="flex flex-col gap-3">
+        <label className="text-sm">
+          Name
+          <input
+            className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </label>
+        <label className="text-sm">
+          Phone
+          <input
+            className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+          />
+        </label>
+        <label className="text-sm">
+          Email
+          <input
+            type="email"
+            className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </label>
+        <label className="text-sm">
+          ID document
+          <input
+            className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+            value={idDocument}
+            onChange={(e) => setIdDocument(e.target.value)}
+          />
+        </label>
+        <button
+          type="submit"
+          className="rounded bg-zinc-900 py-2 text-white dark:bg-zinc-100 dark:text-zinc-900"
+        >
+          Save
+        </button>
+      </form>
+    </div>
+  );
+}

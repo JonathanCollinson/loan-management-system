@@ -13,6 +13,7 @@ import { LoanStatus } from '../../common/enums/loan-status.enum';
 import { UserRole } from '../../common/enums/user-role.enum';
 import type { JwtUser } from '../../common/types/jwt-user';
 import { formatMonthFromDate } from '../../common/utils/format-month-from-date.util';
+import { withTransactionOrFallback } from '../../common/utils/mongo-transaction.util';
 import { resolveLenderWalletUserId } from './lender-wallet.util';
 import { MonthlyPrincipalBudgetService } from '../monthly-principal-budget/monthly-principal-budget.service';
 import { BorrowersRepository } from '../borrowers/borrowers.repository';
@@ -126,13 +127,11 @@ export class LoansService {
 
     const lenderWalletUserId = resolveLenderWalletUserId(actor, ownerUserId);
 
-    const session = await this.connection.startSession();
-    session.startTransaction();
-    try {
+    return withTransactionOrFallback(this.connection, async (session) => {
       const debited = await this.usersRepo.decrementWalletIfGte(
         lenderWalletUserId,
         principal,
-        session,
+        session ?? undefined,
       );
       if (!debited) {
         throw new BadRequestException(
@@ -157,17 +156,11 @@ export class LoansService {
           totalPaid: 0,
           outstandingAmount: totalAmount,
         },
-        session,
+        session ?? undefined,
       );
 
-      await session.commitTransaction();
       return this.toObject(loan);
-    } catch (err) {
-      await session.abortTransaction();
-      throw err;
-    } finally {
-      await session.endSession();
-    }
+    });
   }
 
   async listLoans(actor: JwtUser): Promise<LoanObject[]> {

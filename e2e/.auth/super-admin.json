@@ -1,0 +1,14 @@
+{
+  "cookies": [],
+  "origins": [
+    {
+      "origin": "http://127.0.0.1:3000",
+      "localStorage": [
+        {
+          "name": "lms_token",
+          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OWM1MTVhMzEzZWQ1M2E3NzVjYzg3NTkiLCJlbWFpbCI6ImFkbWluQGV4YW1wbGUuY29tIiwicm9sZSI6IlNVUEVSX0FETUlOIiwiaWF0IjoxNzc0NTM3OTc1LCJleHAiOjE3NzUxNDI3NzV9.1hkxPyqMrXKKwHOrcDi1N4N5f19ZYi_zyU8jPrMireA"
+        }
+      ]
+    }
+  ]
+}

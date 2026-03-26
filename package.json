@@ -3,7 +3,7 @@
   "private": true,
   "packageManager": "pnpm@9.15.4",
   "scripts": {
-    "dev:api": "docker compose stop api 2>/dev/null; docker compose up -d mongo && pnpm --filter @lms/api run start:dev",
+    "dev:api": "docker compose stop api 2>/dev/null; docker compose up -d mongo mongo-init && pnpm --filter @lms/api run start:dev",
     "dev:api:docker": "docker compose up -d",
     "dev:web": "pnpm --filter @lms/web run dev",
     "build": "pnpm --filter @lms/api run build && pnpm --filter @lms/web run build",

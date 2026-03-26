@@ -1,25 +1,56 @@
 services:
   mongo:
     image: mongo:7
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
     ports:
       - "27018:27017"
     volumes:
       - mongo_data:/data/db
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mongosh",
+          "--quiet",
+          "mongodb://127.0.0.1:27017/",
+          "--eval",
+          "db.adminCommand('ping').ok",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  mongo-init:
+    image: mongo:7
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: on-failure
+    entrypoint:
+      - bash
+      - -c
+      - |
+        mongosh "mongodb://mongo:27017/" --eval '
+          try { rs.status(); } catch (e) {
+            rs.initiate({ _id: "rs0", members: [{ _id: 0, host: "mongo:27017" }] });
+          }
+        '
 
   api:
     build:
       context: .
       dockerfile: Dockerfile
-    # Host 4001 avoids clashing with local `pnpm run dev:api` (Nest on 4000).
     ports:
       - "4001:4000"
     environment:
-      MONGODB_URI: mongodb://mongo:27018/lms
+      MONGODB_URI: mongodb://mongo:27017/lms
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
       SEED_SUPER_ADMIN_EMAIL: ${SEED_SUPER_ADMIN_EMAIL:-admin@example.com}
       SEED_SUPER_ADMIN_PASSWORD: ${SEED_SUPER_ADMIN_PASSWORD:-ChangeMe123!}
     depends_on:
-      - mongo
+      mongo-init:
+        condition: service_completed_successfully
 
 volumes:
   mongo_data:

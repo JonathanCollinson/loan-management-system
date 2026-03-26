@@ -18,6 +18,12 @@ Workspace is defined in [`pnpm-workspace.yaml`](pnpm-workspace.yaml). Install an
 - **MongoDB** (local install, or Docker via the dev script below)
 - Optional: **Docker** for `docker compose` (API image + Mongo)
 
+Multi-document transactions (monthly budget, loans, repayments) require MongoDB to support transactions: use a **replica set** (MongoDB Atlas, or a single-node replica set). The [`docker-compose.yml`](docker-compose.yml) `mongo` service runs with `--replSet rs0` and a one-shot `mongo-init` that calls `rs.initiate`. For a **standalone** `mongod` without a replica set, the API falls back to non-transactional writes (acceptable for local dev; use a replica set in production).
+
+If you switch an existing data volume from standalone to replica set, you may need to remove the Docker volume or re-init the repl set; see MongoDB docs for `rs.initiate`.
+
+For a manual local `mongod`, start with `--replSet rs0`, then in `mongosh` run `rs.initiate({ _id: "rs0", members: [{ _id: 0, host: "localhost:27017" }] })` (adjust host/port).
+
 ## Setup
 
 1. Clone the repo and install dependencies:
@@ -33,6 +39,8 @@ Workspace is defined in [`pnpm-workspace.yaml`](pnpm-workspace.yaml). Install an
    ```
 
    See [`.env.example`](.env.example) for `MONGODB_URI`, `JWT_SECRET`, web `NEXT_PUBLIC_GRAPHQL_URL`, and optional SuperAdmin seeding.
+
+   **MongoDB URI:** `pnpm run dev:api` starts Mongo in Docker on host port **27018** (not 27017). Use `MONGODB_URI=mongodb://127.0.0.1:27018/lms?directConnection=true` in `.env` (as in `.env.example`). If `MONGODB_URI` still points at `localhost:27017` while only Docker Mongo is running, the API will log **Server selection timed out** until you fix the port or start a local `mongod` on 27017.
 
 3. Start MongoDB and the API in development (stops any compose `api` container to free port 4000, starts Mongo, then runs Nest in watch mode):
 

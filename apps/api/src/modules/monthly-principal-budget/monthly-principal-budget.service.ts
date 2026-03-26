@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectConnection } from '@nestjs/mongoose';
 import { Connection, Types } from 'mongoose';
+import { withTransactionOrFallback } from '../../common/utils/mongo-transaction.util';
 import { parseMonth } from '../../common/utils/month-range.util';
 import type { JwtUser } from '../../common/types/jwt-user';
 import { FundingRepository } from '../funding/funding.repository';
@@ -118,14 +119,17 @@ export class MonthlyPrincipalBudgetService {
     note: string | undefined,
     actor: JwtUser,
   ): Promise<MonthlyPrincipalBudgetDetail> {
-    const session = await this.connection.startSession();
-    session.startTransaction();
-    try {
-      const existing = await this.repo.findByMonth(month, session);
+    await withTransactionOrFallback(this.connection, async (session) => {
+      const existing = await this.repo.findByMonth(month, session ?? undefined);
       const previousTotal = existing?.totalPrincipal ?? 0;
       const delta = totalPrincipal - previousTotal;
 
-      await this.repo.upsertTotal(month, totalPrincipal, note, session);
+      await this.repo.upsertTotal(
+        month,
+        totalPrincipal,
+        note,
+        session ?? undefined,
+      );
 
       await this.repo.appendEvent(
         {
@@ -136,16 +140,9 @@ export class MonthlyPrincipalBudgetService {
           actorUserId: new Types.ObjectId(actor.id),
           note,
         },
-        session,
+        session ?? undefined,
       );
-
-      await session.commitTransaction();
-    } catch (e) {
-      await session.abortTransaction();
-      throw e;
-    } finally {
-      await session.endSession();
-    }
+    });
 
     return this.getDetail(month);
   }
@@ -156,14 +153,12 @@ export class MonthlyPrincipalBudgetService {
     note: string | undefined,
     actor: JwtUser,
   ): Promise<MonthlyPrincipalBudgetDetail> {
-    const session = await this.connection.startSession();
-    session.startTransaction();
-    try {
-      const existing = await this.repo.findByMonth(month, session);
+    await withTransactionOrFallback(this.connection, async (session) => {
+      const existing = await this.repo.findByMonth(month, session ?? undefined);
       const previousTotal = existing?.totalPrincipal ?? 0;
       const newTotal = previousTotal + delta;
 
-      await this.repo.upsertTotal(month, newTotal, note, session);
+      await this.repo.upsertTotal(month, newTotal, note, session ?? undefined);
 
       await this.repo.appendEvent(
         {
@@ -174,16 +169,9 @@ export class MonthlyPrincipalBudgetService {
           actorUserId: new Types.ObjectId(actor.id),
           note,
         },
-        session,
+        session ?? undefined,
       );
-
-      await session.commitTransaction();
-    } catch (e) {
-      await session.abortTransaction();
-      throw e;
-    } finally {
-      await session.endSession();
-    }
+    });
 
     return this.getDetail(month);
   }

@@ -20,6 +20,8 @@ pnpm --filter @lms/api run start:dev
 
 Ensure `MONGODB_URI` in `.env` matches your MongoDB. The app loads `.env` from the repo root and from `apps/api` (see `app.module.ts` `envFilePath`).
 
+If you use **`pnpm run dev:api`** from the monorepo root, Compose exposes Mongo on **127.0.0.1:27018**. Use e.g. `mongodb://127.0.0.1:27018/lms?directConnection=true`. A URI on **27017** while only Docker Mongo is running causes **MongooseServerSelectionError** (connection timeout).
+
 ## Scripts
 
 | Command | Description |
@@ -31,6 +33,16 @@ Ensure `MONGODB_URI` in `.env` matches your MongoDB. The app loads `.env` from t
 | `pnpm --filter @lms/api run test` | Jest unit tests |
 | `pnpm --filter @lms/api run test:integration` | GraphQL integration tests (`test/jest-integration.json`; optional `INTEGRATION_MONGODB_URI`) |
 | `pnpm --filter @lms/api run test:e2e` | E2E (see `test/jest-e2e.json`) |
+
+## MongoDB transactions
+
+Operations that touch multiple documents in one logical step (monthly principal budget, loan creation, repayments) use MongoDB **transactions**. Those require a **replica set** (or sharded cluster). Atlas is always a replica set.
+
+**Local Docker:** use the repo [`docker-compose.yml`](../../docker-compose.yml) `mongo` + `mongo-init` services so the server runs as a single-node replica set.
+
+**Local binary:** run `mongod` with `--replSet rs0` and run `rs.initiate` once in `mongosh` (see root [README](../../README.md)).
+
+If the server is a **standalone** instance (`mongod` without `--replSet`), the API detects transaction failures and retries without a transaction (no atomicity across writes — fine for solo dev; production should use a replica set).
 
 ## Environment variables
 

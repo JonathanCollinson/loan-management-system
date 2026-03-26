@@ -11,6 +11,7 @@ import type { JwtUser } from '../../common/types/jwt-user';
 import { Loan } from '../loans/schemas/loan.schema';
 import { LoansRepository } from '../loans/loans.repository';
 import { UsersRepository } from '../users/users.repository';
+import { withTransactionOrFallback } from '../../common/utils/mongo-transaction.util';
 import { AddRepaymentInput } from './dto/add-repayment.input';
 import { RepaymentObject } from './graphql/repayment.object';
 import { RepaymentDocument } from './schemas/repayment.schema';
@@ -45,10 +46,11 @@ export class RepaymentsService {
     input: AddRepaymentInput,
     actor: JwtUser,
   ): Promise<RepaymentObject> {
-    const session = await this.connection.startSession();
-    session.startTransaction();
-    try {
-      const loan = await this.loansRepo.findById(input.loanId, session);
+    return withTransactionOrFallback(this.connection, async (session) => {
+      const loan = await this.loansRepo.findById(
+        input.loanId,
+        session ?? undefined,
+      );
       if (!loan) throw new NotFoundException('Loan not found');
 
       const ownerId = loan.ownerUserId.toString();
@@ -81,7 +83,7 @@ export class RepaymentsService {
           method: input.method,
           recordedByUserId: new Types.ObjectId(actor.id),
         },
-        session,
+        session ?? undefined,
       );
 
       const loanUpdate: Partial<Loan> = {
@@ -93,18 +95,20 @@ export class RepaymentsService {
         loanUpdate.paidAt = paymentDate;
       }
 
-      await this.loansRepo.updateById(input.loanId, loanUpdate, session);
+      await this.loansRepo.updateById(
+        input.loanId,
+        loanUpdate,
+        session ?? undefined,
+      );
 
-      await this.usersRepo.incrementWallet(ownerId, input.amount, session);
+      await this.usersRepo.incrementWallet(
+        ownerId,
+        input.amount,
+        session ?? undefined,
+      );
 
-      await session.commitTransaction();
       return this.toObject(repayment);
-    } catch (e) {
-      await session.abortTransaction();
-      throw e;
-    } finally {
-      await session.endSession();
-    }
+    });
   }
 
   async listRepayments(actor: JwtUser): Promise<RepaymentObject[]> {

@@ -5,6 +5,15 @@ import { useMutation, useQuery } from '@apollo/client/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+const ME = gql`
+  query MeNewLoan {
+    me {
+      role
+      walletBalance
+    }
+  }
+`;
+
 const CFG = gql`
   query SystemConfig {
     systemConfig {
@@ -23,6 +32,11 @@ const M = gql`
 
 export default function NewLoanPage() {
   const router = useRouter();
+  const { data: meData } = useQuery<{
+    me: { role: string; walletBalance: number };
+  }>(ME);
+  const role = meData?.me?.role;
+  const wallet = meData?.me?.walletBalance;
   const { data: cfg } = useQuery<{
     systemConfig: { defaultInterestRate: number };
   }>(CFG);
@@ -59,10 +73,25 @@ export default function NewLoanPage() {
   return (
     <div className="mx-auto max-w-md space-y-4">
       <h1 className="text-2xl font-semibold">New loan</h1>
-      <p className="text-sm text-zinc-500">
-        Principal is debited from the field user&apos;s wallet. Fund the user
-        first (admin funding).
-      </p>
+      {role === 'USER' && (
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          Principal is debited from <strong>your</strong> wallet (field user).
+          Ask an admin to record funding to your user if you need more balance.
+        </p>
+      )}
+      {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          Principal is debited from <strong>your</strong> admin wallet. Use{' '}
+          <strong>Funding</strong> to credit your user with lendable balance for
+          the loan month. The borrower still belongs to their field user; only
+          who supplies principal changes when you create the loan.
+        </p>
+      )}
+      {(role === 'ADMIN' || role === 'SUPER_ADMIN') && wallet != null && (
+        <p className="text-sm tabular-nums text-zinc-700 dark:text-zinc-300">
+          Your wallet: {Number(wallet).toFixed(2)}
+        </p>
+      )}
       <form onSubmit={onSubmit} className="flex flex-col gap-3">
         <label className="text-sm">
           Borrower ID

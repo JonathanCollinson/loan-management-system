@@ -81,6 +81,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {role === 'SUPER_ADMIN' && (
         <>
           <Link
+            className={linkCls(pathname?.startsWith('/admin/capital'))}
+            href="/admin/capital"
+          >
+            Capital
+          </Link>
+          <Link
             className={linkCls(pathname?.startsWith('/admin/admins'))}
             href="/admin/admins"
           >
@@ -102,7 +108,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span>
               {data?.me?.name} ({data?.me?.role})
             </span>
-            {role === 'USER' && (
+            {(role === 'USER' ||
+              role === 'ADMIN' ||
+              role === 'SUPER_ADMIN') && (
               <span className="tabular-nums">
                 Wallet: {Number(data?.me?.walletBalance ?? 0).toFixed(2)}
               </span>

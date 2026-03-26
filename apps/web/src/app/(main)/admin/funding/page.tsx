@@ -18,6 +18,27 @@ const LIST = gql`
   }
 `;
 
+const ME = gql`
+  query MeFunding {
+    me {
+      role
+    }
+  }
+`;
+
+const BUDGET_SNAPSHOT = gql`
+  query BudgetSnapshot($month: String!) {
+    monthlyPrincipalBudget(month: $month) {
+      totalPrincipal
+      utilization {
+        allocatedTotal
+        principalLoanedTotal
+        remainingVsAllocations
+      }
+    }
+  }
+`;
+
 const UTIL = gql`
   query FundingUtilization($month: String!) {
     fundingUtilization(month: $month) {
@@ -59,6 +80,21 @@ const fmt = (n: number) =>
 
 export default function FundingPage() {
   const [reportMonth, setReportMonth] = useState(currentMonth);
+  const { data: meData } = useQuery<{ me: { role: string } }>(ME);
+  const isSuperAdmin = meData?.me?.role === 'SUPER_ADMIN';
+  const { data: budgetData } = useQuery<{
+    monthlyPrincipalBudget: {
+      totalPrincipal: number;
+      utilization: {
+        allocatedTotal: number;
+        principalLoanedTotal: number;
+        remainingVsAllocations: number;
+      };
+    };
+  }>(BUDGET_SNAPSHOT, {
+    variables: { month: reportMonth },
+    skip: !isSuperAdmin,
+  });
   const { data, loading, refetch } = useQuery<{
     fundingTransfers: {
       id: string;
@@ -123,11 +159,46 @@ export default function FundingPage() {
       <section className="space-y-3">
         <h2 className="text-lg font-medium">Monthly utilization</h2>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Funding assigned counts transfers with this <strong>period</strong>{' '}
-          (YYYY-MM), or legacy transfers without a period whose record date
-          falls in the month. Principal loaned uses loans created in that month.
-          Wallet balance is the user&apos;s current balance (not historical).
+          Recipients can be <strong>field users</strong>, <strong>admins</strong>, or{' '}
+          <strong>super admins</strong>—funding credits their lendable wallet for
+          the chosen period. Funding assigned counts transfers with this{' '}
+          <strong>period</strong> (YYYY-MM), or legacy transfers without a period
+          whose record date falls in the month. Principal loaned uses loans
+          created in that month. Wallet balance is the user&apos;s current
+          balance (not historical).
         </p>
+        {isSuperAdmin && budgetData?.monthlyPrincipalBudget && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm dark:border-amber-900 dark:bg-amber-950/40">
+            <strong className="text-amber-900 dark:text-amber-200">
+              Monthly principal budget ({reportMonth})
+            </strong>
+            <div className="mt-1 grid gap-1 text-amber-900/90 tabular-nums dark:text-amber-100/90 sm:grid-cols-2">
+              <span>
+                Ceiling: {fmt(budgetData.monthlyPrincipalBudget.totalPrincipal)}
+              </span>
+              <span>
+                Allocated:{' '}
+                {fmt(budgetData.monthlyPrincipalBudget.utilization.allocatedTotal)}
+              </span>
+              <span>
+                Principal loaned:{' '}
+                {fmt(
+                  budgetData.monthlyPrincipalBudget.utilization.principalLoanedTotal,
+                )}
+              </span>
+              <span>
+                Remaining vs allocations:{' '}
+                {fmt(
+                  budgetData.monthlyPrincipalBudget.utilization
+                    .remainingVsAllocations,
+                )}
+              </span>
+            </div>
+            <p className="mt-2 text-xs text-amber-800/80 dark:text-amber-200/70">
+              Manage CEO capital ceilings on the Capital page.
+            </p>
+          </div>
+        )}
         <label className="inline-flex flex-col gap-1 text-sm">
           Report month
           <input
@@ -195,7 +266,12 @@ export default function FundingPage() {
           onSubmit={onSubmit}
           className="max-w-md space-y-3 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950"
         >
-          <h2 className="font-medium">Record funding to field user</h2>
+          <h2 className="font-medium">Record funding (wallet credit)</h2>
+          <p className="text-xs text-zinc-500">
+            Paste the recipient&apos;s user ID. Use Funding period (YYYY-MM) to
+            tag the month; required for budget checks when a monthly ceiling is
+            set.
+          </p>
           <input
             required
             placeholder="Recipient user ID"

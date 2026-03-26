@@ -14,9 +14,23 @@ const Q = gql`
       phone
       address
       createdByUserId
+      audience
     }
   }
 `;
+
+type Audience = 'OWNER_ONLY' | 'ALL_FIELD_USERS' | 'ADMINS_ONLY';
+
+function audienceLabel(a: Audience): string {
+  switch (a) {
+    case 'ALL_FIELD_USERS':
+      return 'Everyone (all field users)';
+    case 'ADMINS_ONLY':
+      return 'Admins only';
+    default:
+      return 'Owner only';
+  }
+}
 
 const UPDATE = gql`
   mutation UpdateBorrower($input: UpdateBorrowerInput!) {
@@ -35,6 +49,7 @@ export default function BorrowerDetailPage() {
       name: string;
       phone?: string | null;
       address: string;
+      audience: Audience;
     };
   }>(Q, { variables: { id } });
   const [mutate] = useMutation(UPDATE);
@@ -79,6 +94,12 @@ export default function BorrowerDetailPage() {
         </Link>
       </div>
       <h1 className="text-2xl font-semibold">{b.name}</h1>
+      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        Visible to:{' '}
+        <span className="font-medium text-zinc-800 dark:text-zinc-200">
+          {audienceLabel(b.audience)}
+        </span>
+      </p>
       <form onSubmit={onSubmit} className="flex flex-col gap-3">
         <label className="text-sm">
           Name

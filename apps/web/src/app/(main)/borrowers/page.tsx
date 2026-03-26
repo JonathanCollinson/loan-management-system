@@ -19,9 +19,12 @@ const Q = gql`
       phone
       address
       createdByUserId
+      audience
     }
   }
 `;
+
+type Audience = 'OWNER_ONLY' | 'ALL_FIELD_USERS' | 'ADMINS_ONLY';
 
 type Row = {
   id: string;
@@ -29,7 +32,19 @@ type Row = {
   phone?: string | null;
   address: string;
   createdByUserId: string;
+  audience: Audience;
 };
+
+function audienceLabel(a: Audience): string {
+  switch (a) {
+    case 'ALL_FIELD_USERS':
+      return 'Everyone';
+    case 'ADMINS_ONLY':
+      return 'Admins only';
+    default:
+      return 'Owner only';
+  }
+}
 
 const columnHelper = createColumnHelper<Row>();
 
@@ -50,6 +65,10 @@ export default function BorrowersPage() {
       columnHelper.accessor('address', {
         header: 'Address',
         cell: (ctx) => ctx.getValue() || '—',
+      }),
+      columnHelper.accessor('audience', {
+        header: 'Visible to',
+        cell: (ctx) => audienceLabel(ctx.getValue()),
       }),
       columnHelper.display({
         id: 'actions',

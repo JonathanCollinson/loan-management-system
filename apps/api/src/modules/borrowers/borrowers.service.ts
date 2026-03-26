@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { BorrowerAudience } from '../../common/enums/borrower-audience.enum';
 import { UserRole } from '../../common/enums/user-role.enum';
 import type { JwtUser } from '../../common/types/jwt-user';
 import { parseMonth } from '../../common/utils/month-range.util';
@@ -37,6 +38,7 @@ export class BorrowersService {
       phone: doc.phone,
       address: doc.address ?? '',
       createdByUserId: doc.createdByUserId.toString(),
+      audience: doc.audience ?? BorrowerAudience.OWNER_ONLY,
     };
   }
 
@@ -70,18 +72,24 @@ export class BorrowersService {
       throw new BadRequestException('ownerUserId must be a field user');
     }
 
+    const audience =
+      actor.role === UserRole.USER
+        ? BorrowerAudience.OWNER_ONLY
+        : (input.audience ?? BorrowerAudience.OWNER_ONLY);
+
     const doc = await this.repo.create({
       name: input.name,
       phone: input.phone,
       address: input.address,
       createdByUserId: new Types.ObjectId(ownerId),
+      audience,
     });
     return this.toObject(doc);
   }
 
   async listBorrowers(actor: JwtUser): Promise<BorrowerObject[]> {
     if (actor.role === UserRole.USER) {
-      const docs = await this.repo.findByOwner(actor.id);
+      const docs = await this.repo.findAccessibleForFieldUser(actor.id);
       return docs.map((d) => this.toObject(d));
     }
     const docs = await this.repo.findAll();
@@ -97,6 +105,13 @@ export class BorrowersService {
 
   assertCanAccessBorrower(doc: BorrowerDocument, actor: JwtUser): void {
     if (actor.role === UserRole.USER) {
+      const aud = doc.audience ?? BorrowerAudience.OWNER_ONLY;
+      if (aud === BorrowerAudience.ADMINS_ONLY) {
+        throw new ForbiddenException();
+      }
+      if (aud === BorrowerAudience.ALL_FIELD_USERS) {
+        return;
+      }
       if (doc.createdByUserId.toString() !== actor.id) {
         throw new ForbiddenException();
       }
@@ -127,7 +142,7 @@ export class BorrowersService {
   ): Promise<BorrowerLoanSummaryPayload> {
     const borrowerDocs =
       actor.role === UserRole.USER
-        ? await this.repo.findByOwner(actor.id)
+        ? await this.repo.findAccessibleForFieldUser(actor.id)
         : await this.repo.findAll();
 
     const borrowerIds = borrowerDocs.map((b) => b._id);

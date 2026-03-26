@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
+import { BorrowerAudience } from '../../../common/enums/borrower-audience.enum';
 import { User } from '../../users/schemas/user.schema';
 
 export type BorrowerDocument = HydratedDocument<Borrower>;
@@ -25,6 +26,13 @@ export class Borrower {
 
   @Prop({ type: Types.ObjectId, ref: User.name, required: true })
   createdByUserId: Types.ObjectId;
+
+  @Prop({
+    type: String,
+    enum: BorrowerAudience,
+    default: BorrowerAudience.OWNER_ONLY,
+  })
+  audience: BorrowerAudience;
 }
 
 export const BorrowerSchema = SchemaFactory.createForClass(Borrower);

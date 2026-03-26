@@ -1,5 +1,6 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { BorrowerAudience } from '../../../common/enums/borrower-audience.enum';
 
 @InputType()
 export class CreateBorrowerInput {
@@ -23,4 +24,9 @@ export class CreateBorrowerInput {
   @IsOptional()
   @IsString()
   ownerUserId?: string;
+
+  @Field(() => BorrowerAudience, { nullable: true })
+  @IsOptional()
+  @IsEnum(BorrowerAudience)
+  audience?: BorrowerAudience;
 }

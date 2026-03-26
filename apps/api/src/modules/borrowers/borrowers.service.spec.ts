@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { getModelToken } from '@nestjs/mongoose';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Types } from 'mongoose';
+import { BorrowerAudience } from '../../common/enums/borrower-audience.enum';
 import { UserRole } from '../../common/enums/user-role.enum';
 import type { JwtUser } from '../../common/types/jwt-user';
 import { Loan } from '../loans/schemas/loan.schema';
@@ -13,6 +14,7 @@ describe('BorrowersService', () => {
   let service: BorrowersService;
   const borrowersRepo = {
     findByOwner: jest.fn(),
+    findAccessibleForFieldUser: jest.fn(),
     findAll: jest.fn(),
     findById: jest.fn(),
     create: jest.fn(),
@@ -67,10 +69,10 @@ describe('BorrowersService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('listBorrowers uses findByOwner for USER', async () => {
-    borrowersRepo.findByOwner.mockResolvedValue([]);
+  it('listBorrowers uses findAccessibleForFieldUser for USER', async () => {
+    borrowersRepo.findAccessibleForFieldUser.mockResolvedValue([]);
     await service.listBorrowers(fieldUser('u1'));
-    expect(borrowersRepo.findByOwner).toHaveBeenCalledWith('u1');
+    expect(borrowersRepo.findAccessibleForFieldUser).toHaveBeenCalledWith('u1');
     expect(borrowersRepo.findAll).not.toHaveBeenCalled();
   });
 
@@ -87,6 +89,7 @@ describe('BorrowersService', () => {
   it('assertCanAccessBorrower forbids USER accessing other owner', () => {
     const doc = {
       createdByUserId: new Types.ObjectId(),
+      audience: BorrowerAudience.OWNER_ONLY,
     };
     expect(() =>
       service.assertCanAccessBorrower(doc as never, fieldUser('other')),

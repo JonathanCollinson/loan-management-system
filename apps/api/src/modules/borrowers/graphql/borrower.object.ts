@@ -1,4 +1,5 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
+import { BorrowerAudience } from '../../../common/enums/borrower-audience.enum';
 
 @ObjectType()
 export class BorrowerObject {
@@ -16,4 +17,7 @@ export class BorrowerObject {
 
   @Field(() => ID)
   createdByUserId: string;
+
+  @Field(() => BorrowerAudience)
+  audience: BorrowerAudience;
 }

@@ -1,6 +1,7 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { LoansModule } from '../loans/loans.module';
+import { MonthlyPrincipalBudgetModule } from '../monthly-principal-budget/monthly-principal-budget.module';
 import { UsersModule } from '../users/users.module';
 import {
   FundingTransfer,
@@ -17,8 +18,9 @@ import { FundingService } from './funding.service';
     ]),
     UsersModule,
     LoansModule,
+    forwardRef(() => MonthlyPrincipalBudgetModule),
   ],
   providers: [FundingRepository, FundingService, FundingResolver],
-  exports: [FundingService],
+  exports: [FundingService, FundingRepository],
 })
 export class FundingModule {}

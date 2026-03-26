@@ -71,4 +71,33 @@ export class FundingRepository {
       .exec();
     return agg[0]?.total ?? 0;
   }
+
+  /** All recipients: funding tagged with `period`, or legacy rows without `period` in the month range. */
+  async sumTotalAllocationsInMonth(
+    month: string,
+    start: Date,
+    end: Date,
+  ): Promise<number> {
+    const agg = await this.model
+      .aggregate<{ total: number }>([
+        {
+          $match: {
+            $or: [
+              { period: month },
+              {
+                $and: [
+                  {
+                    $or: [{ period: null }, { period: { $exists: false } }],
+                  },
+                  { createdAt: { $gte: start, $lte: end } },
+                ],
+              },
+            ],
+          },
+        },
+        { $group: { _id: null, total: { $sum: '$amount' } } },
+      ])
+      .exec();
+    return agg[0]?.total ?? 0;
+  }
 }

@@ -1,8 +1,10 @@
 import {
   BadRequestException,
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectConnection } from '@nestjs/mongoose';
 import { Connection, Types } from 'mongoose';
@@ -10,6 +12,9 @@ import { InterestType } from '../../common/enums/interest-type.enum';
 import { LoanStatus } from '../../common/enums/loan-status.enum';
 import { UserRole } from '../../common/enums/user-role.enum';
 import type { JwtUser } from '../../common/types/jwt-user';
+import { formatMonthFromDate } from '../../common/utils/format-month-from-date.util';
+import { resolveLenderWalletUserId } from './lender-wallet.util';
+import { MonthlyPrincipalBudgetService } from '../monthly-principal-budget/monthly-principal-budget.service';
 import { BorrowersRepository } from '../borrowers/borrowers.repository';
 import { SystemConfigService } from '../system-config/system-config.service';
 import { UsersRepository } from '../users/users.repository';
@@ -32,6 +37,8 @@ export class LoansService {
     private readonly usersRepo: UsersRepository,
     private readonly systemConfigService: SystemConfigService,
     @InjectConnection() private readonly connection: Connection,
+    @Inject(forwardRef(() => MonthlyPrincipalBudgetService))
+    private readonly monthlyPrincipalBudgetService: MonthlyPrincipalBudgetService,
   ) {}
 
   toObject(doc: LoanDocument): LoanObject {
@@ -113,11 +120,19 @@ export class LoansService {
     const endDate = addMonths(startDate, termMonths);
     const monthlyInstallment = totalAmount / termMonths;
 
+    const budgetMonth = formatMonthFromDate(startDate);
+    await this.monthlyPrincipalBudgetService.assertLoanFitsBudget(
+      budgetMonth,
+      principal,
+    );
+
+    const lenderWalletUserId = resolveLenderWalletUserId(actor, ownerUserId);
+
     const session = await this.connection.startSession();
     session.startTransaction();
     try {
       const debited = await this.usersRepo.decrementWalletIfGte(
-        ownerUserId,
+        lenderWalletUserId,
         principal,
         session,
       );

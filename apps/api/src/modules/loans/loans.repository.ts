@@ -89,4 +89,18 @@ export class LoansRepository {
       .exec();
     return agg[0]?.total ?? 0;
   }
+
+  async sumPrincipalCreatedBetween(start: Date, end: Date): Promise<number> {
+    const agg = await this.loanModel
+      .aggregate<{ total: number }>([
+        {
+          $match: {
+            createdAt: { $gte: start, $lte: end },
+          },
+        },
+        { $group: { _id: null, total: { $sum: '$principalAmount' } } },
+      ])
+      .exec();
+    return agg[0]?.total ?? 0;
+  }
 }

@@ -1,12 +1,15 @@
 import {
   BadRequestException,
   ForbiddenException,
+  Inject,
   Injectable,
+  forwardRef,
 } from '@nestjs/common';
 import { Types } from 'mongoose';
 import { UserRole } from '../../common/enums/user-role.enum';
 import type { JwtUser } from '../../common/types/jwt-user';
 import { parseMonth } from '../../common/utils/month-range.util';
+import { MonthlyPrincipalBudgetService } from '../monthly-principal-budget/monthly-principal-budget.service';
 import { LoansRepository } from '../loans/loans.repository';
 import { UsersRepository } from '../users/users.repository';
 import { RecordFundingInput } from './dto/record-funding.input';
@@ -24,6 +27,8 @@ export class FundingService {
     private readonly fundingRepo: FundingRepository,
     private readonly usersRepo: UsersRepository,
     private readonly loansRepo: LoansRepository,
+    @Inject(forwardRef(() => MonthlyPrincipalBudgetService))
+    private readonly monthlyPrincipalBudgetService: MonthlyPrincipalBudgetService,
   ) {}
 
   toObject(doc: FundingTransferDocument): FundingTransferObject {
@@ -44,8 +49,25 @@ export class FundingService {
     actor: JwtUser,
   ): Promise<FundingTransferObject> {
     const recipient = await this.usersRepo.findById(input.recipientUserId);
-    if (!recipient || recipient.role !== UserRole.USER) {
-      throw new BadRequestException('Recipient must be a field user');
+    const allowedRoles = [
+      UserRole.USER,
+      UserRole.ADMIN,
+      UserRole.SUPER_ADMIN,
+    ];
+    if (
+      !recipient ||
+      !allowedRoles.includes(recipient.role as UserRole)
+    ) {
+      throw new BadRequestException(
+        'Recipient must be a field user, admin, or super admin',
+      );
+    }
+
+    if (input.period) {
+      await this.monthlyPrincipalBudgetService.assertFundingFitsBudget(
+        input.period,
+        input.amount,
+      );
     }
 
     await this.usersRepo.incrementWallet(input.recipientUserId, input.amount);

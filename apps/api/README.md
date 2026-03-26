@@ -29,6 +29,7 @@ Ensure `MONGODB_URI` in `.env` matches your MongoDB. The app loads `.env` from t
 | `pnpm --filter @lms/api run start:prod` | Production (`node dist/main.js`) |
 | `pnpm --filter @lms/api run build` | `nest build` |
 | `pnpm --filter @lms/api run test` | Jest unit tests |
+| `pnpm --filter @lms/api run test:integration` | GraphQL integration tests (`test/jest-integration.json`; optional `INTEGRATION_MONGODB_URI`) |
 | `pnpm --filter @lms/api run test:e2e` | E2E (see `test/jest-e2e.json`) |
 
 ## Environment variables

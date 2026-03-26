@@ -8,6 +8,8 @@
     "dev:web": "pnpm --filter @lms/web run dev",
     "build": "pnpm --filter @lms/api run build && pnpm --filter @lms/web run build",
     "test": "pnpm --filter @lms/api run test",
+    "test:web": "pnpm --filter @lms/web run test",
+    "test:integration": "pnpm --filter @lms/api run test:integration",
     "test:e2e": "pnpm --filter @lms/web run test:e2e",
     "lint": "pnpm --filter @lms/api run lint && pnpm --filter @lms/web run lint",
     "prepare": "husky"

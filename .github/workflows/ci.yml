@@ -29,6 +29,14 @@ jobs:
           node-version: "22"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @lms/api run build
       - run: pnpm --filter @lms/api run test
+      - run: pnpm --filter @lms/api run test:integration
+        env:
+          INTEGRATION_MONGODB_URI: mongodb://127.0.0.1:27017/lms_integration
+      - run: pnpm --filter @lms/web run test
+      - run: pnpm --filter @lms/api run build
       - run: pnpm --filter @lms/web run build
+      - run: pnpm --filter @lms/web exec playwright install --with-deps chromium
+      - run: pnpm --filter @lms/web run test:e2e
+        env:
+          CI: true

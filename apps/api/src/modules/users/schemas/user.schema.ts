@@ -12,7 +12,7 @@ export class User {
   @Prop({ required: true })
   passwordHash: string;
 
-  @Prop({ required: true, enum: UserRole })
+  @Prop({ required: true, type: String, enum: UserRole })
   role: UserRole;
 
   @Prop({ required: true, trim: true })

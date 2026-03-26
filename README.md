@@ -62,10 +62,25 @@ Workspace is defined in [`pnpm-workspace.yaml`](pnpm-workspace.yaml). Install an
 | `pnpm run dev:api:docker` | `docker compose up -d` (API + Mongo) |
 | `pnpm run dev:web` | Next.js dev server |
 | `pnpm run build` | Build API then web |
-| `pnpm run test` | API unit tests |
+| `pnpm run test` | API unit tests (Jest) |
+| `pnpm run test:web` | Web unit tests (Jest + Testing Library) |
+| `pnpm run test:integration` | API GraphQL integration tests (MongoDB Memory Server or `INTEGRATION_MONGODB_URI`) |
 | `pnpm run test:e2e` | Web Playwright tests |
 
 Package-specific commands use filters, e.g. `pnpm --filter @lms/api run start:dev`, `pnpm --filter @lms/web run build`.
+
+### Test environment variables
+
+| Variable | Used by | Purpose |
+|----------|---------|---------|
+| `MONGODB_URI` | API, CI | MongoDB connection string |
+| `INTEGRATION_MONGODB_URI` | `pnpm run test:integration` | Optional: real Mongo URI instead of embedded Mongo Memory Server |
+| `NEXT_PUBLIC_GRAPHQL_URL` | Web, Playwright | GraphQL HTTP endpoint (e.g. `http://localhost:4000/graphql`) |
+| `PLAYWRIGHT_BASE_URL` | Playwright | Web app base URL (default `http://127.0.0.1:3000`) |
+| `SEED_SUPER_ADMIN_EMAIL` / `SEED_SUPER_ADMIN_PASSWORD` | API seed, E2E | First Super Admin when the users collection is empty; E2E defaults fall back to these |
+| `E2E_SUPER_ADMIN_*`, `E2E_ADMIN_*`, `E2E_USER_*` | Playwright `e2e/auth.setup.ts` | Optional overrides for login and seeded admin/field users |
+
+Playwright E2E with `CI=true` starts the API and web from built artifacts; ensure MongoDB is available and matches `MONGODB_URI`. For local E2E, start Mongo and the API (`pnpm run dev:api`), then run `pnpm run test:e2e` — Playwright reuses an existing dev server on port 3000 when present.
 
 ## Features (high level)
 
@@ -87,7 +102,7 @@ Configuration: [`commitlint.config.cjs`](commitlint.config.cjs), hook: [`.husky/
 
 ## CI
 
-GitHub Actions workflow: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) — `pnpm install --frozen-lockfile`, build and test API, build web.
+GitHub Actions workflow: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) — install, API unit tests, API integration tests (Mongo service), web unit tests, build API and web, Playwright E2E against the built stack.
 
 ## API & web details
 

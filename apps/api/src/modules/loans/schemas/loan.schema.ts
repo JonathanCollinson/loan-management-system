@@ -21,7 +21,7 @@ export class Loan {
   @Prop({ required: true })
   interestRate: number;
 
-  @Prop({ required: true, enum: InterestType })
+  @Prop({ required: true, type: String, enum: InterestType })
   interestType: InterestType;
 
   @Prop({ required: true })
@@ -42,7 +42,7 @@ export class Loan {
   @Prop({ required: true })
   monthlyInstallment: number;
 
-  @Prop({ required: true, enum: LoanStatus })
+  @Prop({ required: true, type: String, enum: LoanStatus })
   status: LoanStatus;
 
   @Prop({ default: 0 })

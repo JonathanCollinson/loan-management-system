@@ -17,7 +17,7 @@ export class Repayment {
   @Prop({ required: true })
   paymentDate: Date;
 
-  @Prop({ required: true, enum: PaymentMethod })
+  @Prop({ required: true, type: String, enum: PaymentMethod })
   method: PaymentMethod;
 
   @Prop({ type: Types.ObjectId, ref: User.name })

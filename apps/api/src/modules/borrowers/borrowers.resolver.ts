@@ -1,4 +1,11 @@
-import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
+import {
+  Args,
+  Mutation,
+  Query,
+  Resolver,
+  registerEnumType,
+} from '@nestjs/graphql';
+import { BorrowerAudience } from '../../common/enums/borrower-audience.enum';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { JwtUser } from '../../common/types/jwt-user';
 import { BorrowersService } from './borrowers.service';
@@ -6,6 +13,8 @@ import { CreateBorrowerInput } from './dto/create-borrower.input';
 import { UpdateBorrowerInput } from './dto/update-borrower.input';
 import { BorrowerObject } from './graphql/borrower.object';
 import { BorrowerLoanSummaryPayload } from './graphql/borrower-loan-summary.object';
+
+registerEnumType(BorrowerAudience, { name: 'BorrowerAudience' });
 
 @Resolver(() => BorrowerObject)
 export class BorrowersResolver {

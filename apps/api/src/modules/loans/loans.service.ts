@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { InjectConnection } from '@nestjs/mongoose';
 import { Connection, Types } from 'mongoose';
+import { BorrowerAudience } from '../../common/enums/borrower-audience.enum';
 import { InterestType } from '../../common/enums/interest-type.enum';
 import { LoanStatus } from '../../common/enums/loan-status.enum';
 import { UserRole } from '../../common/enums/user-role.enum';
@@ -101,11 +102,25 @@ export class LoansService {
     const borrower = await this.borrowersRepo.findById(input.borrowerId);
     if (!borrower) throw new NotFoundException('Borrower not found');
 
-    const ownerUserId = borrower.createdByUserId.toString();
+    const borrowerOwnerId = borrower.createdByUserId.toString();
+    const audience = borrower.audience ?? BorrowerAudience.OWNER_ONLY;
 
-    if (actor.role === UserRole.USER && ownerUserId !== actor.id) {
-      throw new ForbiddenException();
+    if (actor.role === UserRole.USER) {
+      if (audience === BorrowerAudience.ADMINS_ONLY) {
+        throw new ForbiddenException();
+      }
+      if (audience !== BorrowerAudience.ALL_FIELD_USERS) {
+        if (borrowerOwnerId !== actor.id) {
+          throw new ForbiddenException();
+        }
+      }
     }
+
+    const loanOwnerUserId =
+      actor.role === UserRole.USER &&
+      audience === BorrowerAudience.ALL_FIELD_USERS
+        ? actor.id
+        : borrowerOwnerId;
 
     const principal = input.principalAmount;
     let interestRate: number;
@@ -130,7 +145,11 @@ export class LoansService {
       principal,
     );
 
-    const lenderWalletUserId = resolveLenderWalletUserId(actor, ownerUserId);
+    const lenderWalletUserId = resolveLenderWalletUserId(
+      actor,
+      borrowerOwnerId,
+      audience,
+    );
 
     return withTransactionOrFallback(this.connection, async (session) => {
       const debited = await this.usersRepo.decrementWalletIfGte(
@@ -147,7 +166,7 @@ export class LoansService {
       const loan = await this.loansRepo.create(
         {
           borrowerId: new Types.ObjectId(input.borrowerId),
-          ownerUserId: new Types.ObjectId(ownerUserId),
+          ownerUserId: new Types.ObjectId(loanOwnerUserId),
           principalAmount: principal,
           interestRate,
           interestType: InterestType.FLAT,

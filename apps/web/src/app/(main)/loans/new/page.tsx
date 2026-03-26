@@ -22,9 +22,23 @@ const BORROWERS = gql`
       name
       phone
       address
+      audience
     }
   }
 `;
+
+type Audience = 'OWNER_ONLY' | 'ALL_FIELD_USERS' | 'ADMINS_ONLY';
+
+function audienceShort(a: Audience): string {
+  switch (a) {
+    case 'ALL_FIELD_USERS':
+      return 'Everyone';
+    case 'ADMINS_ONLY':
+      return 'Admins only';
+    default:
+      return 'Owner';
+  }
+}
 
 const CFG = gql`
   query SystemConfig {
@@ -55,6 +69,7 @@ export default function NewLoanPage() {
       name: string;
       phone?: string | null;
       address: string;
+      audience: Audience;
     }[];
   }>(BORROWERS);
   const { data: cfg } = useQuery<{
@@ -73,7 +88,7 @@ export default function NewLoanPage() {
     () =>
       (borrowersData?.borrowers ?? []).map((b) => ({
         value: b.id,
-        label: `${b.name} — ${b.address || 'No address'}`,
+        label: `${b.name} — ${b.address || 'No address'} (${audienceShort(b.audience)})`,
         searchText: `${b.name} ${b.address ?? ''} ${b.phone ?? ''} ${b.id}`,
       })),
     [borrowersData],

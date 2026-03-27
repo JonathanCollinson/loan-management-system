@@ -1,8 +1,13 @@
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
+import {
+  increaseMonthlyPrincipalBudgetInputSchema,
+  setMonthlyPrincipalBudgetInputSchema,
+} from '@lms/validation';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { JwtUser } from '../../common/types/jwt-user';
 import { UserRole } from '../../common/enums/user-role.enum';
+import { ParseZodPipe } from '../../common/pipes/parse-zod.pipe';
 import { IncreaseMonthlyPrincipalBudgetInput } from './dto/increase-monthly-principal-budget.input';
 import { SetMonthlyPrincipalBudgetInput } from './dto/set-monthly-principal-budget.input';
 import { MonthlyPrincipalBudgetDetail } from './graphql/monthly-principal-budget-event.object';
@@ -26,7 +31,8 @@ export class MonthlyPrincipalBudgetResolver {
   @Mutation(() => MonthlyPrincipalBudgetDetail)
   @Roles(UserRole.SUPER_ADMIN)
   async setMonthlyPrincipalBudget(
-    @Args('input') input: SetMonthlyPrincipalBudgetInput,
+    @Args('input', new ParseZodPipe(setMonthlyPrincipalBudgetInputSchema))
+    input: SetMonthlyPrincipalBudgetInput,
     @CurrentUser() actor: JwtUser,
   ): Promise<MonthlyPrincipalBudgetDetail> {
     return this.monthlyPrincipalBudgetService.setMonthlyPrincipalBudget(
@@ -40,7 +46,8 @@ export class MonthlyPrincipalBudgetResolver {
   @Mutation(() => MonthlyPrincipalBudgetDetail)
   @Roles(UserRole.SUPER_ADMIN)
   async increaseMonthlyPrincipalBudget(
-    @Args('input') input: IncreaseMonthlyPrincipalBudgetInput,
+    @Args('input', new ParseZodPipe(increaseMonthlyPrincipalBudgetInputSchema))
+    input: IncreaseMonthlyPrincipalBudgetInput,
     @CurrentUser() actor: JwtUser,
   ): Promise<MonthlyPrincipalBudgetDetail> {
     return this.monthlyPrincipalBudgetService.increaseMonthlyPrincipalBudget(

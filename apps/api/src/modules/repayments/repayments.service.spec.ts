@@ -2,8 +2,8 @@ import { ForbiddenException } from '@nestjs/common';
 import { getConnectionToken } from '@nestjs/mongoose';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserRole } from '../../common/enums/user-role.enum';
+import { CapitalFundsService } from '../capital-funds/capital-funds.service';
 import { LoansRepository } from '../loans/loans.repository';
-import { UsersRepository } from '../users/users.repository';
 import { RepaymentsService } from './repayments.service';
 import { RepaymentsRepository } from './repayments.repository';
 
@@ -11,7 +11,9 @@ describe('RepaymentsService', () => {
   let service: RepaymentsService;
   const repaymentsRepo = { create: jest.fn(), findByOwnerLoanIds: jest.fn() };
   const loansRepo = { findById: jest.fn(), updateById: jest.fn() };
-  const usersRepo = { incrementWallet: jest.fn() };
+  const capitalFundsService = {
+    receiveRepayment: jest.fn().mockResolvedValue(undefined),
+  };
 
   const mockSession = {
     startTransaction: jest.fn(),
@@ -30,7 +32,7 @@ describe('RepaymentsService', () => {
         RepaymentsService,
         { provide: RepaymentsRepository, useValue: repaymentsRepo },
         { provide: LoansRepository, useValue: loansRepo },
-        { provide: UsersRepository, useValue: usersRepo },
+        { provide: CapitalFundsService, useValue: capitalFundsService },
         { provide: getConnectionToken(), useValue: connection },
       ],
     }).compile();

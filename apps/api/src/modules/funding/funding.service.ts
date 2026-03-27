@@ -5,10 +5,13 @@ import {
   Injectable,
   forwardRef,
 } from '@nestjs/common';
-import { Types } from 'mongoose';
+import { InjectConnection } from '@nestjs/mongoose';
+import { Connection, Types } from 'mongoose';
 import { UserRole } from '../../common/enums/user-role.enum';
 import type { JwtUser } from '../../common/types/jwt-user';
+import { withTransactionOrFallback } from '../../common/utils/mongo-transaction.util';
 import { parseMonth } from '../../common/utils/month-range.util';
+import { CapitalFundsService } from '../capital-funds/capital-funds.service';
 import { MonthlyPrincipalBudgetService } from '../monthly-principal-budget/monthly-principal-budget.service';
 import { LoansRepository } from '../loans/loans.repository';
 import { UsersRepository } from '../users/users.repository';
@@ -20,6 +23,7 @@ import {
 } from './graphql/funding-utilization.object';
 import { FundingTransferDocument } from './schemas/funding-transfer.schema';
 import { FundingRepository } from './funding.repository';
+import { UserFundAllocationsRepository } from './user-fund-allocations.repository';
 
 @Injectable()
 export class FundingService {
@@ -27,6 +31,9 @@ export class FundingService {
     private readonly fundingRepo: FundingRepository,
     private readonly usersRepo: UsersRepository,
     private readonly loansRepo: LoansRepository,
+    private readonly capitalFundsService: CapitalFundsService,
+    private readonly userFundAllocRepo: UserFundAllocationsRepository,
+    @InjectConnection() private readonly connection: Connection,
     @Inject(forwardRef(() => MonthlyPrincipalBudgetService))
     private readonly monthlyPrincipalBudgetService: MonthlyPrincipalBudgetService,
   ) {}
@@ -37,6 +44,7 @@ export class FundingService {
       id: doc._id.toString(),
       adminUserId: doc.adminUserId.toString(),
       recipientUserId: doc.recipientUserId.toString(),
+      capitalFundId: doc.capitalFundId?.toString(),
       amount: doc.amount,
       note: doc.note,
       period: doc.period,
@@ -63,17 +71,42 @@ export class FundingService {
       );
     }
 
-    await this.usersRepo.incrementWallet(input.recipientUserId, input.amount);
+    return withTransactionOrFallback(this.connection, async (session) => {
+      await this.capitalFundsService.allocateFieldFunding(
+        input.capitalFundId,
+        input.amount,
+        input.recipientUserId,
+        actor.id,
+        session ?? undefined,
+      );
 
-    const doc = await this.fundingRepo.create({
-      adminUserId: new Types.ObjectId(actor.id),
-      recipientUserId: new Types.ObjectId(input.recipientUserId),
-      amount: input.amount,
-      note: input.note,
-      period: input.period,
+      await this.userFundAllocRepo.incrementBalance(
+        input.recipientUserId,
+        input.capitalFundId,
+        input.amount,
+        session ?? undefined,
+      );
+
+      await this.usersRepo.incrementWallet(
+        input.recipientUserId,
+        input.amount,
+        session ?? undefined,
+      );
+
+      const doc = await this.fundingRepo.create(
+        {
+          adminUserId: new Types.ObjectId(actor.id),
+          recipientUserId: new Types.ObjectId(input.recipientUserId),
+          capitalFundId: new Types.ObjectId(input.capitalFundId),
+          amount: input.amount,
+          note: input.note,
+          period: input.period,
+        },
+        session ?? undefined,
+      );
+
+      return this.toObject(doc);
     });
-
-    return this.toObject(doc);
   }
 
   async listFunding(actor: JwtUser): Promise<FundingTransferObject[]> {

@@ -1,10 +1,14 @@
-import { Field, Float, InputType } from '@nestjs/graphql';
-import { IsNumber, Min } from 'class-validator';
+import { Field, Float, InputType, Int } from '@nestjs/graphql';
+import { GlobalRolloverMode } from '../../../common/enums/global-rollover-mode.enum';
 
 @InputType()
 export class UpdateSystemConfigInput {
-  @Field(() => Float)
-  @IsNumber()
-  @Min(0)
-  defaultInterestRate: number;
+  @Field(() => Float, { nullable: true })
+  defaultInterestRate?: number;
+
+  @Field(() => Int, { nullable: true })
+  defaultTermMonths?: number;
+
+  @Field(() => GlobalRolloverMode, { nullable: true })
+  globalRolloverMode?: GlobalRolloverMode;
 }

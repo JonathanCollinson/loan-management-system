@@ -2,7 +2,13 @@
 
 import { gql } from '@apollo/client';
 import { useMutation, useQuery } from '@apollo/client/react';
+import Link from 'next/link';
 import { useState } from 'react';
+import {
+  createFieldUserInputSchema,
+  updateUserInputSchema,
+} from '@lms/validation';
+import { formatZodError } from '@/lib/zod-form';
 
 const LIST = gql`
   query ListFieldUsers {
@@ -48,11 +54,22 @@ export default function AdminUsersPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [createError, setCreateError] = useState<string | null>(null);
 
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
+    setCreateError(null);
+    const parsed = createFieldUserInputSchema.safeParse({
+      email,
+      password,
+      name,
+    });
+    if (!parsed.success) {
+      setCreateError(formatZodError(parsed.error));
+      return;
+    }
     await create({
-      variables: { input: { email, password, name } },
+      variables: { input: parsed.data },
     });
     setEmail('');
     setPassword('');
@@ -64,7 +81,16 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-2xl font-semibold">Field users</h1>
+      <div>
+        <h1 className="text-2xl font-semibold">Field users</h1>
+        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+          Per-fund borrower and loan totals are on{' '}
+          <Link className="text-blue-600 hover:underline" href="/borrowers/summary">
+            Borrower loan summary
+          </Link>
+          .
+        </p>
+      </div>
       <form
         onSubmit={onCreate}
         className="max-w-md space-y-3 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950"
@@ -94,6 +120,9 @@ export default function AdminUsersPage() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
+        {createError && (
+          <p className="text-sm text-red-600 dark:text-red-400">{createError}</p>
+        )}
         <button
           type="submit"
           disabled={creating}
@@ -135,13 +164,13 @@ export default function AdminUsersPage() {
                       type="button"
                       className="text-sm text-blue-600"
                       onClick={async () => {
+                        const parsed = updateUserInputSchema.safeParse({
+                          userId: u.id,
+                          isActive: !u.isActive,
+                        });
+                        if (!parsed.success) return;
                         await update({
-                          variables: {
-                            input: {
-                              userId: u.id,
-                              isActive: !u.isActive,
-                            },
-                          },
+                          variables: { input: parsed.data },
                         });
                         refetch();
                       }}

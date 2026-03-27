@@ -1,5 +1,6 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { CapitalFundsModule } from '../capital-funds/capital-funds.module';
 import { Loan, LoanSchema } from '../loans/schemas/loan.schema';
 import { UsersModule } from '../users/users.module';
 import { BorrowersRepository } from './borrowers.repository';
@@ -14,6 +15,7 @@ import { Borrower, BorrowerSchema } from './schemas/borrower.schema';
       { name: Loan.name, schema: LoanSchema },
     ]),
     UsersModule,
+    forwardRef(() => CapitalFundsModule),
   ],
   providers: [BorrowersRepository, BorrowersService, BorrowersResolver],
   exports: [BorrowersRepository, BorrowersService],

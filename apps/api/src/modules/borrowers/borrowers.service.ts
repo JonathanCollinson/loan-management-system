@@ -11,6 +11,7 @@ import { UserRole } from '../../common/enums/user-role.enum';
 import type { JwtUser } from '../../common/types/jwt-user';
 import { parseMonth } from '../../common/utils/month-range.util';
 import { Loan, LoanDocument } from '../loans/schemas/loan.schema';
+import { CapitalFundsService } from '../capital-funds/capital-funds.service';
 import { UsersRepository } from '../users/users.repository';
 import { summarizeBorrowerLoans } from './borrower-loan-summary.util';
 import { CreateBorrowerInput } from './dto/create-borrower.input';
@@ -28,6 +29,7 @@ export class BorrowersService {
   constructor(
     private readonly repo: BorrowersRepository,
     private readonly usersRepo: UsersRepository,
+    private readonly capitalFundsService: CapitalFundsService,
     @InjectModel(Loan.name) private readonly loanModel: Model<LoanDocument>,
   ) {}
 
@@ -139,7 +141,13 @@ export class BorrowersService {
   async getBorrowerLoanSummary(
     actor: JwtUser,
     month?: string | null,
+    principalFundId?: string | null,
   ): Promise<BorrowerLoanSummaryPayload> {
+    await this.capitalFundsService.assertCanUsePrincipalFundForFilter(
+      actor,
+      principalFundId,
+    );
+
     const borrowerDocs =
       actor.role === UserRole.USER
         ? await this.repo.findAccessibleForFieldUser(actor.id)
@@ -149,6 +157,9 @@ export class BorrowersService {
     const loanFilter: Record<string, unknown> = {
       borrowerId: { $in: borrowerIds },
     };
+    if (principalFundId) {
+      loanFilter.principalFundId = new Types.ObjectId(principalFundId);
+    }
     if (month) {
       const { start, end } = parseMonth(month);
       loanFilter.createdAt = { $gte: start, $lte: end };
@@ -173,6 +184,8 @@ export class BorrowersService {
 
     for (const doc of borrowerDocs) {
       const forBorrower = loansByBorrower.get(doc._id.toString()) ?? [];
+      if (forBorrower.length === 0) continue;
+
       const summary = summarizeBorrowerLoans(
         forBorrower.map((l) => ({
           principalAmount: l.principalAmount,

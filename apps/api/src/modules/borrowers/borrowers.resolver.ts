@@ -5,9 +5,14 @@ import {
   Resolver,
   registerEnumType,
 } from '@nestjs/graphql';
+import {
+  createBorrowerInputSchema,
+  updateBorrowerInputSchema,
+} from '@lms/validation';
 import { BorrowerAudience } from '../../common/enums/borrower-audience.enum';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { JwtUser } from '../../common/types/jwt-user';
+import { ParseZodPipe } from '../../common/pipes/parse-zod.pipe';
 import { BorrowersService } from './borrowers.service';
 import { CreateBorrowerInput } from './dto/create-borrower.input';
 import { UpdateBorrowerInput } from './dto/update-borrower.input';
@@ -29,8 +34,13 @@ export class BorrowersResolver {
   async borrowerLoanSummary(
     @CurrentUser() actor: JwtUser,
     @Args('month', { nullable: true }) month?: string,
+    @Args('principalFundId', { nullable: true }) principalFundId?: string,
   ): Promise<BorrowerLoanSummaryPayload> {
-    return this.borrowersService.getBorrowerLoanSummary(actor, month);
+    return this.borrowersService.getBorrowerLoanSummary(
+      actor,
+      month,
+      principalFundId,
+    );
   }
 
   @Query(() => BorrowerObject)
@@ -43,7 +53,8 @@ export class BorrowersResolver {
 
   @Mutation(() => BorrowerObject)
   async createBorrower(
-    @Args('input') input: CreateBorrowerInput,
+    @Args('input', new ParseZodPipe(createBorrowerInputSchema))
+    input: CreateBorrowerInput,
     @CurrentUser() actor: JwtUser,
   ): Promise<BorrowerObject> {
     return this.borrowersService.createBorrower(input, actor);
@@ -51,7 +62,8 @@ export class BorrowersResolver {
 
   @Mutation(() => BorrowerObject)
   async updateBorrower(
-    @Args('input') input: UpdateBorrowerInput,
+    @Args('input', new ParseZodPipe(updateBorrowerInputSchema))
+    input: UpdateBorrowerInput,
     @CurrentUser() actor: JwtUser,
   ): Promise<BorrowerObject> {
     return this.borrowersService.updateBorrower(input, actor);

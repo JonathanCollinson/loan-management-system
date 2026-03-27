@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { ClientSession, Model, Types } from 'mongoose';
 import {
   FundingTransfer,
   FundingTransferDocument,
@@ -15,8 +15,10 @@ export class FundingRepository {
 
   async create(
     data: Partial<FundingTransfer>,
+    session?: ClientSession,
   ): Promise<FundingTransferDocument> {
-    return this.model.create(data);
+    const [doc] = await this.model.create([data], session ? { session } : {});
+    return doc;
   }
 
   async findAll(): Promise<FundingTransferDocument[]> {
@@ -31,6 +33,26 @@ export class FundingRepository {
       .find({ recipientUserId: new Types.ObjectId(recipientUserId) })
       .sort({ createdAt: -1 })
       .exec();
+  }
+
+  /** Distinct capital fund ids from transfers that assigned money to this user. */
+  async distinctCapitalFundIdsForRecipient(
+    recipientUserId: string,
+  ): Promise<string[]> {
+    if (!Types.ObjectId.isValid(recipientUserId)) return [];
+    const rid = new Types.ObjectId(recipientUserId);
+    const rows = await this.model
+      .aggregate<{ _id: Types.ObjectId }>([
+        {
+          $match: {
+            recipientUserId: rid,
+            capitalFundId: { $exists: true, $ne: null },
+          },
+        },
+        { $group: { _id: '$capitalFundId' } },
+      ])
+      .exec();
+    return rows.map((r) => r._id.toString());
   }
 
   /**

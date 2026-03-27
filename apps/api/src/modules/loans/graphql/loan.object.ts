@@ -22,6 +22,12 @@ export class LoanObject {
   @Field(() => ID)
   ownerUserId: string;
 
+  @Field(() => ID, { nullable: true })
+  principalFundId?: string;
+
+  @Field({ nullable: true })
+  principalFundName?: string;
+
   @Field(() => Float)
   principalAmount: number;
 
@@ -60,4 +66,10 @@ export class LoanObject {
 
   @Field({ nullable: true })
   paidAt?: Date;
+
+  @Field()
+  rolloverCount: number;
+
+  @Field({ nullable: true })
+  currentPeriodEnd?: Date;
 }

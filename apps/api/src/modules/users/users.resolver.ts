@@ -1,9 +1,15 @@
 import { NotFoundException } from '@nestjs/common';
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
+import {
+  createAdminInputSchema,
+  createFieldUserInputSchema,
+  updateUserInputSchema,
+} from '@lms/validation';
 import { UserRole } from '../../common/enums/user-role.enum';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { JwtUser } from '../../common/types/jwt-user';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { ParseZodPipe } from '../../common/pipes/parse-zod.pipe';
 import { CreateAdminInput } from './dto/create-admin.input';
 import { CreateFieldUserInput } from './dto/create-field-user.input';
 import { UpdateUserInput } from './dto/update-user.input';
@@ -42,7 +48,8 @@ export class UsersResolver {
   @Mutation(() => UserObject)
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   async createFieldUser(
-    @Args('input') input: CreateFieldUserInput,
+    @Args('input', new ParseZodPipe(createFieldUserInputSchema))
+    input: CreateFieldUserInput,
     @CurrentUser() actor: JwtUser,
   ): Promise<UserObject> {
     return this.usersService.createFieldUser(input, actor.id);
@@ -51,7 +58,8 @@ export class UsersResolver {
   @Mutation(() => UserObject)
   @Roles(UserRole.SUPER_ADMIN)
   async createAdmin(
-    @Args('input') input: CreateAdminInput,
+    @Args('input', new ParseZodPipe(createAdminInputSchema))
+    input: CreateAdminInput,
   ): Promise<UserObject> {
     return this.usersService.createAdmin(input);
   }
@@ -59,7 +67,8 @@ export class UsersResolver {
   @Mutation(() => UserObject)
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   async updateUser(
-    @Args('input') input: UpdateUserInput,
+    @Args('input', new ParseZodPipe(updateUserInputSchema))
+    input: UpdateUserInput,
     @CurrentUser() actor: JwtUser,
   ): Promise<UserObject> {
     return this.usersService.updateUser(input, actor.role);

@@ -1,6 +1,8 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { CapitalFundsModule } from '../capital-funds/capital-funds.module';
 import { BorrowersModule } from '../borrowers/borrowers.module';
+import { FundingModule } from '../funding/funding.module';
 import { MonthlyPrincipalBudgetModule } from '../monthly-principal-budget/monthly-principal-budget.module';
 import { SystemConfigModule } from '../system-config/system-config.module';
 import { UsersModule } from '../users/users.module';
@@ -12,9 +14,11 @@ import { LoansService } from './loans.service';
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Loan.name, schema: LoanSchema }]),
-    BorrowersModule,
-    UsersModule,
+    forwardRef(() => BorrowersModule),
+    forwardRef(() => CapitalFundsModule),
     SystemConfigModule,
+    UsersModule,
+    forwardRef(() => FundingModule),
     forwardRef(() => MonthlyPrincipalBudgetModule),
   ],
   providers: [LoansRepository, LoansService, LoansResolver],

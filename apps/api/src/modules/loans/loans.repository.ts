@@ -56,6 +56,17 @@ export class LoansRepository {
     return this.loanModel.find(q).exec();
   }
 
+  async updateMany(
+    filter: Record<string, unknown>,
+    update: Record<string, unknown>,
+    session?: ClientSession,
+  ): Promise<{ modifiedCount: number }> {
+    const res = await this.loanModel.updateMany(filter, update, {
+      session: session ?? undefined,
+    });
+    return { modifiedCount: res.modifiedCount };
+  }
+
   async updateById(
     id: string,
     data: Partial<Loan>,

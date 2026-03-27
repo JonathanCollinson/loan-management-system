@@ -78,6 +78,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </Link>
         </>
       )}
+      {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
+        <Link
+          className={linkCls(pathname?.startsWith('/admin/funds'))}
+          href="/admin/funds"
+        >
+          Funds
+        </Link>
+      )}
       {role === 'SUPER_ADMIN' && (
         <>
           <Link

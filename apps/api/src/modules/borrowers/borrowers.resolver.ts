@@ -34,8 +34,13 @@ export class BorrowersResolver {
   async borrowerLoanSummary(
     @CurrentUser() actor: JwtUser,
     @Args('month', { nullable: true }) month?: string,
+    @Args('principalFundId', { nullable: true }) principalFundId?: string,
   ): Promise<BorrowerLoanSummaryPayload> {
-    return this.borrowersService.getBorrowerLoanSummary(actor, month);
+    return this.borrowersService.getBorrowerLoanSummary(
+      actor,
+      month,
+      principalFundId,
+    );
   }
 
   @Query(() => BorrowerObject)

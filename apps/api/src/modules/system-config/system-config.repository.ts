@@ -21,6 +21,8 @@ export class SystemConfigRepository {
     return this.model.create({
       singletonKey: 'global',
       defaultInterestRate: 10,
+      defaultTermMonths: 1,
+      globalRolloverMode: 'MANUAL',
     });
   }
 
@@ -30,7 +32,47 @@ export class SystemConfigRepository {
         { singletonKey: 'global' },
         {
           $set: { defaultInterestRate: rate },
-          $setOnInsert: { singletonKey: 'global' },
+          $setOnInsert: {
+            singletonKey: 'global',
+            defaultTermMonths: 1,
+            globalRolloverMode: 'MANUAL',
+          },
+        },
+        { returnDocument: 'after', upsert: true },
+      )
+      .exec();
+    if (!doc) {
+      return this.getOrCreate();
+    }
+    return doc;
+  }
+
+  async updatePatch(patch: {
+    defaultInterestRate?: number;
+    defaultTermMonths?: number;
+    globalRolloverMode?: 'AUTO' | 'MANUAL';
+  }): Promise<SystemConfigDocument> {
+    const $set: Record<string, unknown> = {};
+    if (patch.defaultInterestRate != null) {
+      $set.defaultInterestRate = patch.defaultInterestRate;
+    }
+    if (patch.defaultTermMonths != null) {
+      $set.defaultTermMonths = patch.defaultTermMonths;
+    }
+    if (patch.globalRolloverMode != null) {
+      $set.globalRolloverMode = patch.globalRolloverMode;
+    }
+    const doc = await this.model
+      .findOneAndUpdate(
+        { singletonKey: 'global' },
+        {
+          $set,
+          $setOnInsert: {
+            singletonKey: 'global',
+            defaultInterestRate: 10,
+            defaultTermMonths: 1,
+            globalRolloverMode: 'MANUAL',
+          },
         },
         { returnDocument: 'after', upsert: true },
       )

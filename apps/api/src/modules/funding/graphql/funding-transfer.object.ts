@@ -11,6 +11,12 @@ export class FundingTransferObject {
   @Field(() => ID)
   recipientUserId: string;
 
+  @Field(() => ID, { nullable: true })
+  capitalFundId?: string;
+
+  @Field({ nullable: true })
+  capitalFundName?: string;
+
   @Field(() => Float)
   amount: number;
 

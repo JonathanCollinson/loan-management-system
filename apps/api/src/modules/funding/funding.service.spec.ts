@@ -1,13 +1,23 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { getConnectionToken } from '@nestjs/mongoose';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Types } from 'mongoose';
 import { UserRole } from '../../common/enums/user-role.enum';
 import type { JwtUser } from '../../common/types/jwt-user';
+import { CapitalFundsService } from '../capital-funds/capital-funds.service';
 import { MonthlyPrincipalBudgetService } from '../monthly-principal-budget/monthly-principal-budget.service';
 import { LoansRepository } from '../loans/loans.repository';
 import { UsersRepository } from '../users/users.repository';
 import { FundingService } from './funding.service';
 import { FundingRepository } from './funding.repository';
+import { UserFundAllocationsRepository } from './user-fund-allocations.repository';
+
+jest.mock('../../common/utils/mongo-transaction.util', () => ({
+  withTransactionOrFallback: async (
+    _c: unknown,
+    fn: (s: unknown) => Promise<unknown>,
+  ) => fn(null),
+}));
 
 describe('FundingService', () => {
   let service: FundingService;
@@ -28,6 +38,13 @@ describe('FundingService', () => {
   const budgetService = {
     assertFundingFitsBudget: jest.fn(),
   };
+  const capitalFundsService = {
+    allocateFieldFunding: jest.fn().mockResolvedValue(undefined),
+  };
+  const userFundAllocRepo = {
+    incrementBalance: jest.fn().mockResolvedValue(undefined),
+  };
+  const connection = {};
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -41,6 +58,9 @@ describe('FundingService', () => {
           provide: MonthlyPrincipalBudgetService,
           useValue: budgetService,
         },
+        { provide: CapitalFundsService, useValue: capitalFundsService },
+        { provide: UserFundAllocationsRepository, useValue: userFundAllocRepo },
+        { provide: getConnectionToken(), useValue: connection },
       ],
     }).compile();
     service = module.get(FundingService);
@@ -52,12 +72,15 @@ describe('FundingService', () => {
     role: UserRole.ADMIN,
   };
 
+  const fundId = new Types.ObjectId();
+
   it('recordFunding rejects invalid recipient role', async () => {
     usersRepo.findById.mockResolvedValue({ role: 'invalid' });
     await expect(
       service.recordFunding(
         {
           recipientUserId: 'x',
+          capitalFundId: fundId.toString(),
           amount: 100,
         } as never,
         admin,
@@ -65,7 +88,7 @@ describe('FundingService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('recordFunding calls assertFundingFitsBudget when period set', async () => {
+  it('recordFunding allocates from fund, credits allocation and wallet', async () => {
     const recipientId = new Types.ObjectId();
     usersRepo.findById.mockResolvedValue({
       role: UserRole.USER,
@@ -74,6 +97,7 @@ describe('FundingService', () => {
       _id: { toString: () => 'ft1' },
       adminUserId: { toString: () => admin.id },
       recipientUserId: { toString: () => recipientId.toString() },
+      capitalFundId: fundId,
       amount: 50,
       period: '2026-03',
     });
@@ -81,6 +105,7 @@ describe('FundingService', () => {
     await service.recordFunding(
       {
         recipientUserId: recipientId.toString(),
+        capitalFundId: fundId.toString(),
         amount: 50,
         period: '2026-03',
       } as never,
@@ -91,10 +116,25 @@ describe('FundingService', () => {
       '2026-03',
       50,
     );
+    expect(capitalFundsService.allocateFieldFunding).toHaveBeenCalledWith(
+      fundId.toString(),
+      50,
+      recipientId.toString(),
+      admin.id,
+      undefined,
+    );
+    expect(userFundAllocRepo.incrementBalance).toHaveBeenCalledWith(
+      recipientId.toString(),
+      fundId.toString(),
+      50,
+      undefined,
+    );
     expect(usersRepo.incrementWallet).toHaveBeenCalledWith(
       recipientId.toString(),
       50,
+      undefined,
     );
+    expect(fundingRepo.create).toHaveBeenCalled();
   });
 
   it('fundingUtilization forbids USER', async () => {

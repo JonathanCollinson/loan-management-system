@@ -11,8 +11,12 @@ import {
 import { useMemo, useState } from 'react';
 
 const Q = gql`
-  query BorrowerLoanSummary($month: String) {
-    borrowerLoanSummary(month: $month) {
+  query BorrowerSummaryPage($month: String, $principalFundId: String) {
+    capitalFundsForFilter {
+      id
+      name
+    }
+    borrowerLoanSummary(month: $month, principalFundId: $principalFundId) {
       rows {
         borrowerId
         name
@@ -79,7 +83,9 @@ function currentMonthValue(): string {
 
 export default function BorrowerLoanSummaryPage() {
   const [month, setMonth] = useState<string>('');
+  const [principalFundId, setPrincipalFundId] = useState<string>('');
   const { data, loading, error } = useQuery<{
+    capitalFundsForFilter: { id: string; name: string }[];
     borrowerLoanSummary: {
       rows: Row[];
       totals: {
@@ -89,11 +95,15 @@ export default function BorrowerLoanSummaryPage() {
       };
     };
   }>(Q, {
-    variables: { month: month || null },
+    variables: {
+      month: month || null,
+      principalFundId: principalFundId || null,
+    },
   });
 
   const rows: Row[] = data?.borrowerLoanSummary.rows ?? [];
   const totals = data?.borrowerLoanSummary.totals;
+  const fundOptions = data?.capitalFundsForFilter ?? [];
 
   const columns = useMemo(
     () => [
@@ -153,30 +163,51 @@ export default function BorrowerLoanSummaryPage() {
         <div>
           <h1 className="text-2xl font-semibold">Borrower loan summary</h1>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            Totals reflect borrowers you can access. Optionally filter loans to
-            those created in a calendar month (status and paid date use that
-            subset only).
+            Only borrowers with at least one loan in the selected scope are listed
+            (with &quot;All funds&quot; and &quot;All time&quot;, that means anyone
+            who has ever borrowed). Filter by capital fund and/or calendar month;
+            status and paid date use the loan subset for that month.
+            {principalFundId
+              ? ' Amounts below are only for loans from the selected fund.'
+              : ''}
           </p>
         </div>
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="text-zinc-600 dark:text-zinc-400">Month filter</span>
-          <div className="flex items-center gap-2">
-            <input
-              type="month"
-              className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-600 dark:bg-zinc-900"
-              value={month}
-              onChange={(e) => setMonth(e.target.value)}
-              placeholder={currentMonthValue()}
-            />
-            <button
-              type="button"
-              className="rounded border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-600"
-              onClick={() => setMonth('')}
+        <div className="flex flex-wrap items-end gap-4">
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-zinc-600 dark:text-zinc-400">Capital fund</span>
+            <select
+              className="min-w-[12rem] rounded border border-zinc-300 px-2 py-1 dark:border-zinc-600 dark:bg-zinc-900"
+              value={principalFundId}
+              onChange={(e) => setPrincipalFundId(e.target.value)}
             >
-              All time
-            </button>
-          </div>
-        </label>
+              <option value="">All funds</option>
+              {fundOptions.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-zinc-600 dark:text-zinc-400">Month filter</span>
+            <div className="flex items-center gap-2">
+              <input
+                type="month"
+                className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-600 dark:bg-zinc-900"
+                value={month}
+                onChange={(e) => setMonth(e.target.value)}
+                placeholder={currentMonthValue()}
+              />
+              <button
+                type="button"
+                className="rounded border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-600"
+                onClick={() => setMonth('')}
+              >
+                All time
+              </button>
+            </div>
+          </label>
+        </div>
       </div>
       <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
         <table className="w-full text-left text-sm">

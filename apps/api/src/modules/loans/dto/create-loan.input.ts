@@ -1,10 +1,13 @@
-import { Field, Float, InputType, Int } from '@nestjs/graphql';
+import { Field, Float, ID, InputType, Int } from '@nestjs/graphql';
 import { InterestType } from '../../../common/enums/interest-type.enum';
 
 @InputType()
 export class CreateLoanInput {
   @Field()
   borrowerId: string;
+
+  @Field(() => ID)
+  principalFundId: string;
 
   @Field(() => Float)
   principalAmount: number;
@@ -15,8 +18,8 @@ export class CreateLoanInput {
   @Field(() => InterestType)
   interestType: InterestType;
 
-  @Field(() => Int)
-  termMonths: number;
+  @Field(() => Int, { nullable: true })
+  termMonths?: number;
 
   @Field({ nullable: true })
   startDate?: string;

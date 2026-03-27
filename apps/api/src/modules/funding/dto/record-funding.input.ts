@@ -1,9 +1,13 @@
-import { Field, Float, InputType } from '@nestjs/graphql';
+import { Field, Float, ID, InputType } from '@nestjs/graphql';
 
 @InputType()
 export class RecordFundingInput {
   @Field()
   recipientUserId: string;
+
+  /** Capital pool this allocation is drawn from. */
+  @Field(() => ID)
+  capitalFundId: string;
 
   @Field(() => Float)
   amount: number;

@@ -11,6 +11,7 @@ import { HealthController } from './health.controller';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { BorrowersModule } from './modules/borrowers/borrowers.module';
+import { CapitalFundsModule } from './modules/capital-funds/capital-funds.module';
 import { LoansModule } from './modules/loans/loans.module';
 import { RepaymentsModule } from './modules/repayments/repayments.module';
 import { FundingModule } from './modules/funding/funding.module';
@@ -46,6 +47,7 @@ const envFilePaths = [
     AuthModule,
     UsersModule,
     BorrowersModule,
+    CapitalFundsModule,
     LoansModule,
     RepaymentsModule,
     FundingModule,

@@ -34,6 +34,20 @@ const DASH = gql`
   }
 `;
 
+const FUND_SUM = gql`
+  query CapitalFundSummaries {
+    capitalFundSummaries {
+      fundId
+      fundName
+      principalLoaned
+      totalInterestExpected
+      totalOutstanding
+      totalCollected
+      activeLoansCount
+    }
+  }
+`;
+
 const BORROWER_SUMMARY = gql`
   query UserDashboardBorrowerSummary($month: String!) {
     borrowerLoanSummary(month: $month) {
@@ -74,6 +88,34 @@ export default function DashboardPage() {
     skip: !role || role === 'USER',
   });
 
+  const { data: fundSumData, loading: fundSumLoading } = useQuery<{
+    capitalFundSummaries: {
+      fundId: string;
+      fundName: string;
+      principalLoaned: number;
+      totalInterestExpected: number;
+      totalOutstanding: number;
+      totalCollected: number;
+      activeLoansCount: number;
+    }[];
+  }>(FUND_SUM, {
+    skip: !role || role === 'USER',
+  });
+
+  const { data: fundSumDataUser, loading: fundSumLoadingUser } = useQuery<{
+    capitalFundSummaries: {
+      fundId: string;
+      fundName: string;
+      principalLoaned: number;
+      totalInterestExpected: number;
+      totalOutstanding: number;
+      totalCollected: number;
+      activeLoansCount: number;
+    }[];
+  }>(FUND_SUM, {
+    skip: !role || role !== 'USER',
+  });
+
   const [month, setMonth] = useState(currentMonthValue);
   const { data: summaryData, loading: summaryLoading, error: summaryError } =
     useQuery<{
@@ -98,13 +140,14 @@ export default function DashboardPage() {
   }
 
   if (role === 'USER') {
-    if (summaryLoading) {
+    if (summaryLoading || fundSumLoadingUser) {
       return <p className="text-zinc-500">Loading dashboard…</p>;
     }
     if (summaryError) {
       return <p className="text-red-600">{summaryError.message}</p>;
     }
 
+    const fundRowsUser = fundSumDataUser?.capitalFundSummaries ?? [];
     const rows = summaryData?.borrowerLoanSummary.rows ?? [];
     const totals = summaryData?.borrowerLoanSummary.totals;
     const borrowersWithLoans = rows.filter(
@@ -167,11 +210,74 @@ export default function DashboardPage() {
             value={totals?.totalRepayable ?? 0}
           />
         </div>
+
+        <section className="space-y-3">
+          <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
+            By capital fund
+          </h2>
+          {fundRowsUser.length === 0 ? (
+            <p className="text-sm text-zinc-500">
+              No fund-level loan activity yet.
+            </p>
+          ) : (
+            <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
+                  <tr>
+                    <th className="px-3 py-2">Fund</th>
+                    <th className="px-3 py-2">Principal</th>
+                    <th className="px-3 py-2">Outstanding</th>
+                    <th className="px-3 py-2">Collected</th>
+                    <th className="px-3 py-2">Active</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {fundRowsUser.map((r) => (
+                    <tr
+                      key={r.fundId}
+                      className="border-b border-zinc-100 dark:border-zinc-800"
+                    >
+                      <td className="px-3 py-2 font-medium">
+                        <Link
+                          className="text-blue-600 hover:underline"
+                          href={`/dashboard/capital/${r.fundId}`}
+                        >
+                          {r.fundName}
+                        </Link>
+                      </td>
+                      <td className="px-3 py-2 tabular-nums">
+                        {r.principalLoaned.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </td>
+                      <td className="px-3 py-2 tabular-nums">
+                        {r.totalOutstanding.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </td>
+                      <td className="px-3 py-2 tabular-nums">
+                        {r.totalCollected.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </td>
+                      <td className="px-3 py-2 tabular-nums">
+                        {r.activeLoansCount}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
       </div>
     );
   }
 
-  if (dashLoading) {
+  if (dashLoading || fundSumLoading) {
     return <p className="text-zinc-500">Loading dashboard…</p>;
   }
   if (dashError) {
@@ -179,6 +285,7 @@ export default function DashboardPage() {
   }
 
   const d = dashData?.dashboard;
+  const fundRows = fundSumData?.capitalFundSummaries ?? [];
   const chart = [
     { name: 'Principal loaned', value: d?.totalPrincipalLoaned ?? 0 },
     { name: 'Interest (expected)', value: d?.totalInterestExpected ?? 0 },
@@ -222,6 +329,65 @@ export default function DashboardPage() {
           </BarChart>
         </ResponsiveContainer>
       </div>
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
+          By capital fund
+        </h2>
+        {fundRows.length === 0 ? (
+          <p className="text-sm text-zinc-500">No fund-level loan activity yet.</p>
+        ) : (
+          <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
+                <tr>
+                  <th className="px-3 py-2">Fund</th>
+                  <th className="px-3 py-2">Principal</th>
+                  <th className="px-3 py-2">Outstanding</th>
+                  <th className="px-3 py-2">Collected</th>
+                  <th className="px-3 py-2">Active</th>
+                </tr>
+              </thead>
+              <tbody>
+                {fundRows.map((r) => (
+                  <tr
+                    key={r.fundId}
+                    className="border-b border-zinc-100 dark:border-zinc-800"
+                  >
+                    <td className="px-3 py-2 font-medium">
+                      <Link
+                        className="text-blue-600 hover:underline"
+                        href={`/dashboard/capital/${r.fundId}`}
+                      >
+                        {r.fundName}
+                      </Link>
+                    </td>
+                    <td className="px-3 py-2 tabular-nums">
+                      {r.principalLoaned.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </td>
+                    <td className="px-3 py-2 tabular-nums">
+                      {r.totalOutstanding.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </td>
+                    <td className="px-3 py-2 tabular-nums">
+                      {r.totalCollected.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </td>
+                    <td className="px-3 py-2 tabular-nums">{r.activeLoansCount}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

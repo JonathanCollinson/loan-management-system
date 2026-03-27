@@ -2,7 +2,7 @@
 
 import { gql } from '@apollo/client';
 import { useMutation, useQuery } from '@apollo/client/react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { recordFundingInputSchema } from '@lms/validation';
 import { SearchableSelect } from '@/components/searchable-select';
 import { formatZodError } from '@/lib/zod-form';
@@ -13,10 +13,22 @@ const LIST = gql`
       id
       adminUserId
       recipientUserId
+      capitalFundId
+      capitalFundName
       amount
       note
       period
       createdAt
+    }
+  }
+`;
+
+const ACTIVE_FUNDS = gql`
+  query ActiveFundsForFunding {
+    activeCapitalFunds {
+      id
+      name
+      balance
     }
   }
 `;
@@ -126,12 +138,17 @@ export default function FundingPage() {
     fundingTransfers: {
       id: string;
       recipientUserId: string;
+      capitalFundId?: string | null;
+      capitalFundName?: string | null;
       amount: number;
       note?: string;
       period?: string | null;
       createdAt: string;
     }[];
   }>(LIST);
+  const { data: fundsData } = useQuery<{
+    activeCapitalFunds: { id: string; name: string; balance: number }[];
+  }>(ACTIVE_FUNDS);
   const { data: utilData, loading: utilLoading } = useQuery<{
     fundingUtilization: {
       month: string;
@@ -159,10 +176,32 @@ export default function FundingPage() {
   const [record, { loading: saving }] = useMutation(RECORD);
 
   const [recipientUserId, setRecipientUserId] = useState('');
+  const [capitalFundId, setCapitalFundId] = useState('');
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
   const [period, setPeriod] = useState(currentMonth);
   const [formError, setFormError] = useState<string | null>(null);
+
+  const funds = useMemo(
+    () => fundsData?.activeCapitalFunds ?? [],
+    [fundsData?.activeCapitalFunds],
+  );
+
+  const fundOptions = useMemo(
+    () =>
+      funds.map((f) => ({
+        value: f.id,
+        label: `${f.name} — balance ${Number(f.balance).toFixed(2)}`,
+        searchText: `${f.name} ${f.id}`,
+      })),
+    [funds],
+  );
+
+  useEffect(() => {
+    if (funds.length && !capitalFundId) {
+      setCapitalFundId(funds[0].id);
+    }
+  }, [funds, capitalFundId]);
 
   const recipientOptions = useMemo(
     () =>
@@ -182,9 +221,10 @@ export default function FundingPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setFormError(null);
-    if (!recipientUserId) return;
+    if (!recipientUserId || !capitalFundId) return;
     const raw = {
       recipientUserId,
+      capitalFundId,
       amount: parseFloat(amount),
       note: note || undefined,
       period: period || undefined,
@@ -213,12 +253,12 @@ export default function FundingPage() {
         <h2 className="text-lg font-medium">Monthly utilization</h2>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
           Recipients can be <strong>field users</strong>, <strong>admins</strong>, or{' '}
-          <strong>super admins</strong>—funding credits their lendable wallet for
-          the chosen period. Funding assigned counts transfers with this{' '}
-          <strong>period</strong> (YYYY-MM), or legacy transfers without a period
-          whose record date falls in the month. Principal loaned uses loans
-          created in that month. Wallet balance is the user&apos;s current
-          balance (not historical).
+          <strong>super admins</strong>. Each transfer draws from a selected{' '}
+          <strong>capital fund</strong> (pool balance decreases) and credits that
+          recipient&apos;s allocation for that fund plus their wallet. Funding
+          assigned counts transfers with this <strong>period</strong> (YYYY-MM), or
+          legacy rows without a period. Principal loaned uses loans created in
+          that month.
         </p>
         {isSuperAdmin && budgetData?.monthlyPrincipalBudget && (
           <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm dark:border-amber-900 dark:bg-amber-950/40">
@@ -319,11 +359,22 @@ export default function FundingPage() {
           onSubmit={onSubmit}
           className="max-w-md space-y-3 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950"
         >
-          <h2 className="font-medium">Record funding (wallet credit)</h2>
+          <h2 className="font-medium">Record funding (from capital pool)</h2>
           <p className="text-xs text-zinc-500">
-            Choose the recipient. Use Funding period (YYYY-MM) to tag the month;
-            required for budget checks when a monthly ceiling is set.
+            Choose the capital pool and recipient. Use period (YYYY-MM) to tag the
+            month when a monthly ceiling is set.
           </p>
+          <label className="block text-sm">
+            Capital fund
+            <SearchableSelect
+              id="funding-capital-fund"
+              aria-label="Capital fund"
+              value={capitalFundId}
+              onChange={setCapitalFundId}
+              options={fundOptions}
+              emptyLabel="Search funds…"
+            />
+          </label>
           <label className="block text-sm">
             Recipient
             <SearchableSelect
@@ -364,7 +415,7 @@ export default function FundingPage() {
           )}
           <button
             type="submit"
-            disabled={saving || !recipientUserId}
+            disabled={saving || !recipientUserId || !capitalFundId}
             className="rounded bg-zinc-900 px-4 py-2 text-sm text-white dark:bg-zinc-100 dark:text-zinc-900"
           >
             {saving ? 'Saving…' : 'Record funding'}
@@ -380,6 +431,7 @@ export default function FundingPage() {
           <thead className="bg-zinc-50 dark:bg-zinc-900">
             <tr>
               <th className="px-3 py-2">Date</th>
+              <th className="px-3 py-2">Capital</th>
               <th className="px-3 py-2">Recipient</th>
               <th className="px-3 py-2">Amount</th>
               <th className="px-3 py-2">Period</th>
@@ -394,6 +446,9 @@ export default function FundingPage() {
               >
                 <td className="px-3 py-2">
                   {new Date(t.createdAt).toLocaleString()}
+                </td>
+                <td className="px-3 py-2">
+                  {t.capitalFundName ?? t.capitalFundId ?? '—'}
                 </td>
                 <td className="px-3 py-2 font-mono text-xs">
                   {t.recipientUserId}

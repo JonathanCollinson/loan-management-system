@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -9,8 +10,8 @@ import { LoanStatus } from '../../common/enums/loan-status.enum';
 import { UserRole } from '../../common/enums/user-role.enum';
 import type { JwtUser } from '../../common/types/jwt-user';
 import { Loan } from '../loans/schemas/loan.schema';
+import { CapitalFundsService } from '../capital-funds/capital-funds.service';
 import { LoansRepository } from '../loans/loans.repository';
-import { UsersRepository } from '../users/users.repository';
 import { withTransactionOrFallback } from '../../common/utils/mongo-transaction.util';
 import { AddRepaymentInput } from './dto/add-repayment.input';
 import { RepaymentObject } from './graphql/repayment.object';
@@ -22,7 +23,7 @@ export class RepaymentsService {
   constructor(
     private readonly repaymentsRepo: RepaymentsRepository,
     private readonly loansRepo: LoansRepository,
-    private readonly usersRepo: UsersRepository,
+    private readonly capitalFundsService: CapitalFundsService,
     @InjectConnection() private readonly connection: Connection,
   ) {}
 
@@ -101,9 +102,15 @@ export class RepaymentsService {
         session ?? undefined,
       );
 
-      await this.usersRepo.incrementWallet(
-        ownerId,
+      const fundId = loan.principalFundId?.toString();
+      if (!fundId) {
+        throw new BadRequestException('Loan has no capital fund');
+      }
+      await this.capitalFundsService.receiveRepayment(
+        fundId,
         input.amount,
+        input.loanId,
+        actor.id,
         session ?? undefined,
       );
 

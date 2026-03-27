@@ -25,8 +25,10 @@ export class SystemConfigResolver {
     input: UpdateSystemConfigInput,
     @CurrentUser() _actor: JwtUser,
   ): Promise<SystemConfigObject> {
-    return this.systemConfigService.updateDefaultInterestRate(
-      input.defaultInterestRate,
-    );
+    return this.systemConfigService.updatePatch({
+      defaultInterestRate: input.defaultInterestRate,
+      defaultTermMonths: input.defaultTermMonths,
+      globalRolloverMode: input.globalRolloverMode,
+    });
   }
 }

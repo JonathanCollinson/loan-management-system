@@ -2,6 +2,7 @@
 
 import { gql } from '@apollo/client';
 import { useMutation, useQuery } from '@apollo/client/react';
+import Link from 'next/link';
 import { useState } from 'react';
 import {
   createFieldUserInputSchema,
@@ -80,7 +81,16 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-2xl font-semibold">Field users</h1>
+      <div>
+        <h1 className="text-2xl font-semibold">Field users</h1>
+        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+          Per-fund borrower and loan totals are on{' '}
+          <Link className="text-blue-600 hover:underline" href="/borrowers/summary">
+            Borrower loan summary
+          </Link>
+          .
+        </p>
+      </div>
       <form
         onSubmit={onCreate}
         className="max-w-md space-y-3 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950"

@@ -3,6 +3,8 @@
 import { gql } from '@apollo/client';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { useEffect, useState } from 'react';
+import { updateSystemConfigInputSchema } from '@lms/validation';
+import { formatZodError } from '@/lib/zod-form';
 
 const ME = gql`
   query MeSettings {
@@ -38,6 +40,7 @@ export default function AdminSettingsPage() {
   }>(Q);
   const [update, { loading: saving }] = useMutation(M);
   const [rate, setRate] = useState('10');
+  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     if (data?.systemConfig?.defaultInterestRate != null) {
@@ -47,11 +50,17 @@ export default function AdminSettingsPage() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setFormError(null);
     if (!canEdit) return;
+    const parsed = updateSystemConfigInputSchema.safeParse({
+      defaultInterestRate: parseFloat(rate),
+    });
+    if (!parsed.success) {
+      setFormError(formatZodError(parsed.error));
+      return;
+    }
     await update({
-      variables: {
-        input: { defaultInterestRate: parseFloat(rate) },
-      },
+      variables: { input: parsed.data },
     });
     refetch();
   }
@@ -84,6 +93,9 @@ export default function AdminSettingsPage() {
               onChange={(e) => setRate(e.target.value)}
             />
           </label>
+          {formError && (
+            <p className="text-sm text-red-600 dark:text-red-400">{formError}</p>
+          )}
           <button
             type="submit"
             disabled={saving}

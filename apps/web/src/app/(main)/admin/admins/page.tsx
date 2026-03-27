@@ -3,6 +3,8 @@
 import { gql } from '@apollo/client';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { useState } from 'react';
+import { createAdminInputSchema } from '@lms/validation';
+import { formatZodError } from '@/lib/zod-form';
 
 const LIST = gql`
   query ListAdmins {
@@ -32,11 +34,22 @@ export default function AdminsPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [createError, setCreateError] = useState<string | null>(null);
 
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
+    setCreateError(null);
+    const parsed = createAdminInputSchema.safeParse({
+      email,
+      password,
+      name,
+    });
+    if (!parsed.success) {
+      setCreateError(formatZodError(parsed.error));
+      return;
+    }
     await create({
-      variables: { input: { email, password, name } },
+      variables: { input: parsed.data },
     });
     setEmail('');
     setPassword('');
@@ -78,6 +91,9 @@ export default function AdminsPage() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
+        {createError && (
+          <p className="text-sm text-red-600 dark:text-red-400">{createError}</p>
+        )}
         <button
           type="submit"
           disabled={creating}

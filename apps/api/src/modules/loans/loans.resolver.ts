@@ -1,6 +1,8 @@
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { createLoanInputSchema } from '@lms/validation';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { JwtUser } from '../../common/types/jwt-user';
+import { ParseZodPipe } from '../../common/pipes/parse-zod.pipe';
 import { CreateLoanInput } from './dto/create-loan.input';
 import { LoanObject } from './graphql/loan.object';
 import { LoansService } from './loans.service';
@@ -24,7 +26,8 @@ export class LoansResolver {
 
   @Mutation(() => LoanObject)
   async createLoan(
-    @Args('input') input: CreateLoanInput,
+    @Args('input', new ParseZodPipe(createLoanInputSchema))
+    input: CreateLoanInput,
     @CurrentUser() actor: JwtUser,
   ): Promise<LoanObject> {
     return this.loansService.createLoan(input, actor);

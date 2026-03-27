@@ -4,7 +4,9 @@ import { gql } from '@apollo/client';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
+import { createLoanInputSchema } from '@lms/validation';
 import { SearchableSelect } from '@/components/searchable-select';
+import { formatZodError } from '@/lib/zod-form';
 
 const ME = gql`
   query MeNewLoan {
@@ -80,6 +82,7 @@ export default function NewLoanPage() {
   const [interestRate, setInterestRate] = useState('10');
   const [termMonths, setTermMonths] = useState('3');
   const [create, { loading }] = useMutation<{ createLoan: { id: string } }>(M);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const canSetLoanRate = role === 'SUPER_ADMIN';
   const defaultRate = cfg?.systemConfig?.defaultInterestRate;
@@ -102,20 +105,25 @@ export default function NewLoanPage() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setFormError(null);
     if (!borrowerId) return;
     const rate = parseFloat(interestRate);
+    const raw = {
+      borrowerId,
+      principalAmount: parseFloat(principalAmount),
+      ...(canSetLoanRate && Number.isFinite(rate)
+        ? { interestRate: rate }
+        : {}),
+      interestType: 'FLAT' as const,
+      termMonths: parseInt(termMonths, 10),
+    };
+    const parsed = createLoanInputSchema.safeParse(raw);
+    if (!parsed.success) {
+      setFormError(formatZodError(parsed.error));
+      return;
+    }
     const res = await create({
-      variables: {
-        input: {
-          borrowerId,
-          principalAmount: parseFloat(principalAmount),
-          ...(canSetLoanRate && Number.isFinite(rate)
-            ? { interestRate: rate }
-            : {}),
-          interestType: 'FLAT',
-          termMonths: parseInt(termMonths, 10),
-        },
-      },
+      variables: { input: parsed.data },
     });
     const id = res.data?.createLoan?.id;
     if (id) router.replace(`/loans/${id}`);
@@ -209,6 +217,9 @@ export default function NewLoanPage() {
             onChange={(e) => setTermMonths(e.target.value)}
           />
         </label>
+        {formError && (
+          <p className="text-sm text-red-600 dark:text-red-400">{formError}</p>
+        )}
         <button
           type="submit"
           disabled={loading || !borrowerId}

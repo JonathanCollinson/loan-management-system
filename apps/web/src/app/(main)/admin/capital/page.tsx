@@ -3,6 +3,11 @@
 import { gql } from '@apollo/client';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { useMemo, useState } from 'react';
+import {
+  increaseMonthlyPrincipalBudgetInputSchema,
+  setMonthlyPrincipalBudgetInputSchema,
+} from '@lms/validation';
+import { formatZodError } from '@/lib/zod-form';
 
 const BUDGET = gql`
   query MonthlyPrincipalBudget($month: String!) {
@@ -96,6 +101,8 @@ export default function CapitalPage() {
   const [setNote, setSetNote] = useState('');
   const [incDelta, setIncDelta] = useState('');
   const [incNote, setIncNote] = useState('');
+  const [budgetFormError, setBudgetFormError] = useState<string | null>(null);
+  const [incFormError, setIncFormError] = useState<string | null>(null);
 
   const { data, loading, refetch } = useQuery<{
     monthlyPrincipalBudget: {
@@ -135,14 +142,19 @@ export default function CapitalPage() {
 
   async function onSet(e: React.FormEvent) {
     e.preventDefault();
+    setBudgetFormError(null);
+    const raw = {
+      month,
+      totalPrincipal: parseFloat(setTotal),
+      note: setNote || undefined,
+    };
+    const parsed = setMonthlyPrincipalBudgetInputSchema.safeParse(raw);
+    if (!parsed.success) {
+      setBudgetFormError(formatZodError(parsed.error));
+      return;
+    }
     await doSet({
-      variables: {
-        input: {
-          month,
-          totalPrincipal: parseFloat(setTotal),
-          note: setNote || undefined,
-        },
-      },
+      variables: { input: parsed.data },
     });
     setSetTotal('');
     setSetNote('');
@@ -151,14 +163,19 @@ export default function CapitalPage() {
 
   async function onIncrease(e: React.FormEvent) {
     e.preventDefault();
+    setIncFormError(null);
+    const raw = {
+      month,
+      delta: parseFloat(incDelta),
+      note: incNote || undefined,
+    };
+    const parsed = increaseMonthlyPrincipalBudgetInputSchema.safeParse(raw);
+    if (!parsed.success) {
+      setIncFormError(formatZodError(parsed.error));
+      return;
+    }
     await doIncrease({
-      variables: {
-        input: {
-          month,
-          delta: parseFloat(incDelta),
-          note: incNote || undefined,
-        },
-      },
+      variables: { input: parsed.data },
     });
     setIncDelta('');
     setIncNote('');
@@ -261,6 +278,11 @@ export default function CapitalPage() {
               onChange={(e) => setSetNote(e.target.value)}
             />
           </label>
+          {budgetFormError && (
+            <p className="text-sm text-red-600 dark:text-red-400">
+              {budgetFormError}
+            </p>
+          )}
           <button
             type="submit"
             disabled={setting}
@@ -299,6 +321,9 @@ export default function CapitalPage() {
               onChange={(e) => setIncNote(e.target.value)}
             />
           </label>
+          {incFormError && (
+            <p className="text-sm text-red-600 dark:text-red-400">{incFormError}</p>
+          )}
           <button
             type="submit"
             disabled={increasing}

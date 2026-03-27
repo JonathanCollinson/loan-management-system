@@ -5,6 +5,8 @@ import { useMutation, useQuery } from '@apollo/client/react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { updateBorrowerInputSchema } from '@lms/validation';
+import { formatZodError } from '@/lib/zod-form';
 
 const Q = gql`
   query Borrower($id: String!) {
@@ -58,6 +60,7 @@ export default function BorrowerDetailPage() {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
+  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     if (b) {
@@ -69,15 +72,20 @@ export default function BorrowerDetailPage() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setFormError(null);
+    const input = {
+      borrowerId: id,
+      name,
+      phone: phone || undefined,
+      address,
+    };
+    const parsed = updateBorrowerInputSchema.safeParse(input);
+    if (!parsed.success) {
+      setFormError(formatZodError(parsed.error));
+      return;
+    }
     await mutate({
-      variables: {
-        input: {
-          borrowerId: id,
-          name,
-          phone: phone || undefined,
-          address,
-        },
-      },
+      variables: { input: parsed.data },
     });
     refetch();
   }
@@ -127,6 +135,9 @@ export default function BorrowerDetailPage() {
             onChange={(e) => setAddress(e.target.value)}
           />
         </label>
+        {formError && (
+          <p className="text-sm text-red-600 dark:text-red-400">{formError}</p>
+        )}
         <button
           type="submit"
           className="rounded bg-zinc-900 py-2 text-white dark:bg-zinc-100 dark:text-zinc-900"

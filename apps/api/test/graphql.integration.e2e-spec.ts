@@ -1,4 +1,4 @@
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { mkdirSync } from 'fs';
 import { join } from 'path';
@@ -44,13 +44,6 @@ describe('GraphQL integration (MongoMemoryServer or INTEGRATION_MONGODB_URI)', (
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
-        forbidNonWhitelisted: true,
-        transform: true,
-      }),
-    );
     await app.init();
   }, 120000);
 

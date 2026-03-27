@@ -5,6 +5,8 @@ import { useMutation, useQuery } from '@apollo/client/react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
+import { addRepaymentInputSchema } from '@lms/validation';
+import { formatZodError } from '@/lib/zod-form';
 
 const LOAN = gql`
   query Loan($id: String!) {
@@ -83,19 +85,25 @@ export default function LoanDetailPage() {
 
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState('CASH');
+  const [formError, setFormError] = useState<string | null>(null);
 
   const loan = data?.loan;
 
   async function onRepay(e: React.FormEvent) {
     e.preventDefault();
+    setFormError(null);
+    const raw = {
+      loanId: id,
+      amount: parseFloat(amount),
+      method: method as 'CASH' | 'BANK_TRANSFER' | 'MOBILE_MONEY' | 'OTHER',
+    };
+    const parsed = addRepaymentInputSchema.safeParse(raw);
+    if (!parsed.success) {
+      setFormError(formatZodError(parsed.error));
+      return;
+    }
     await addRep({
-      variables: {
-        input: {
-          loanId: id,
-          amount: parseFloat(amount),
-          method,
-        },
-      },
+      variables: { input: parsed.data },
     });
     setAmount('');
     refetch();
@@ -168,6 +176,11 @@ export default function LoanDetailPage() {
             <option value="MOBILE_MONEY">MOBILE_MONEY</option>
             <option value="OTHER">OTHER</option>
           </select>
+          {formError && (
+            <p className="w-full text-sm text-red-600 dark:text-red-400">
+              {formError}
+            </p>
+          )}
           <button
             type="submit"
             disabled={adding}

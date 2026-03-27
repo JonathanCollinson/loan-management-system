@@ -4,7 +4,9 @@ import { gql } from '@apollo/client';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
+import { createBorrowerInputSchema } from '@lms/validation';
 import { SearchableSelect } from '@/components/searchable-select';
+import { formatZodError } from '@/lib/zod-form';
 
 const CREATE = gql`
   mutation CreateBorrower($input: CreateBorrowerInput!) {
@@ -51,6 +53,7 @@ export default function NewBorrowerPage() {
   const [create, { loading }] = useMutation<{
     createBorrower: { id: string };
   }>(CREATE);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const ownerOptions = useMemo(
     () =>
@@ -64,6 +67,7 @@ export default function NewBorrowerPage() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setFormError(null);
     const input: Record<string, string | undefined> = {
       name,
       address,
@@ -73,7 +77,12 @@ export default function NewBorrowerPage() {
       input.ownerUserId = ownerUserId;
       input.audience = audience;
     }
-    const res = await create({ variables: { input } });
+    const parsed = createBorrowerInputSchema.safeParse(input);
+    if (!parsed.success) {
+      setFormError(formatZodError(parsed.error));
+      return;
+    }
+    const res = await create({ variables: { input: parsed.data } });
     const id = res.data?.createBorrower?.id;
     if (id) router.replace(`/borrowers/${id}`);
   }
@@ -164,6 +173,9 @@ export default function NewBorrowerPage() {
               </label>
             </fieldset>
           </>
+        )}
+        {formError && (
+          <p className="text-sm text-red-600 dark:text-red-400">{formError}</p>
         )}
         <button
           type="submit"

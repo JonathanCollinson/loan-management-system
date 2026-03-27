@@ -3,7 +3,9 @@
 import { gql } from '@apollo/client';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { useMemo, useState } from 'react';
+import { recordFundingInputSchema } from '@lms/validation';
 import { SearchableSelect } from '@/components/searchable-select';
+import { formatZodError } from '@/lib/zod-form';
 
 const LIST = gql`
   query FundingTransfers {
@@ -160,6 +162,7 @@ export default function FundingPage() {
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
   const [period, setPeriod] = useState(currentMonth);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const recipientOptions = useMemo(
     () =>
@@ -178,16 +181,21 @@ export default function FundingPage() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setFormError(null);
     if (!recipientUserId) return;
+    const raw = {
+      recipientUserId,
+      amount: parseFloat(amount),
+      note: note || undefined,
+      period: period || undefined,
+    };
+    const parsed = recordFundingInputSchema.safeParse(raw);
+    if (!parsed.success) {
+      setFormError(formatZodError(parsed.error));
+      return;
+    }
     await record({
-      variables: {
-        input: {
-          recipientUserId,
-          amount: parseFloat(amount),
-          note: note || undefined,
-          period: period || undefined,
-        },
-      },
+      variables: { input: parsed.data },
     });
     setRecipientUserId('');
     setAmount('');
@@ -351,6 +359,9 @@ export default function FundingPage() {
             value={note}
             onChange={(e) => setNote(e.target.value)}
           />
+          {formError && (
+            <p className="text-sm text-red-600 dark:text-red-400">{formError}</p>
+          )}
           <button
             type="submit"
             disabled={saving || !recipientUserId}

@@ -4,7 +4,9 @@ import { gql } from '@apollo/client';
 import { useMutation } from '@apollo/client/react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { loginInputSchema } from '@lms/validation';
 import { setToken } from '@/lib/auth-storage';
+import { formatZodError } from '@/lib/zod-form';
 
 const LOGIN = gql`
   mutation Login($input: LoginInput!) {
@@ -35,9 +37,14 @@ export default function LoginPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    const parsed = loginInputSchema.safeParse({ email, password });
+    if (!parsed.success) {
+      setError(formatZodError(parsed.error));
+      return;
+    }
     try {
       const res = await login({
-        variables: { input: { email, password } },
+        variables: { input: parsed.data },
       });
       const token = res.data?.login?.accessToken;
       if (!token) throw new Error('No token');

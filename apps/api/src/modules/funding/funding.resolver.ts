@@ -1,8 +1,10 @@
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { recordFundingInputSchema } from '@lms/validation';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { JwtUser } from '../../common/types/jwt-user';
 import { UserRole } from '../../common/enums/user-role.enum';
+import { ParseZodPipe } from '../../common/pipes/parse-zod.pipe';
 import { RecordFundingInput } from './dto/record-funding.input';
 import { FundingTransferObject } from './graphql/funding-transfer.object';
 import { FundingUtilizationPayload } from './graphql/funding-utilization.object';
@@ -31,7 +33,8 @@ export class FundingResolver {
   @Mutation(() => FundingTransferObject)
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   async recordFunding(
-    @Args('input') input: RecordFundingInput,
+    @Args('input', new ParseZodPipe(recordFundingInputSchema))
+    input: RecordFundingInput,
     @CurrentUser() actor: JwtUser,
   ): Promise<FundingTransferObject> {
     return this.fundingService.recordFunding(input, actor);

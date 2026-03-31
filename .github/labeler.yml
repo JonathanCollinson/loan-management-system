@@ -1,0 +1,20 @@
+# PR auto-labels (actions/labeler). Paths are relative to repo root.
+# Shared package / lockfile updates can apply both labels — deploy workflow uses the same rules.
+
+api:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'apps/api/**'
+          - 'packages/validation/**'
+          - 'pnpm-lock.yaml'
+          - 'pnpm-workspace.yaml'
+          - 'package.json'
+
+web:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'apps/web/**'
+          - 'packages/validation/**'
+          - 'pnpm-lock.yaml'
+          - 'pnpm-workspace.yaml'
+          - 'package.json'

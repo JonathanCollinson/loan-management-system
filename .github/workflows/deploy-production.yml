@@ -1,0 +1,73 @@
+# Deploy API (Render) and/or web (Vercel) when `main` is updated.
+# Requires GitHub secrets: RENDER_DEPLOY_HOOK_URL, VERCEL_DEPLOY_HOOK_URL
+# (create Deploy Hooks in Render / Vercel dashboards). If a secret is missing, that deploy is skipped.
+#
+# Disable "auto deploy on commit" for the LMS services on Render and Vercel when using hooks,
+# or every push will deploy separately from this workflow (double builds).
+
+name: Deploy production
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  paths:
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      web: ${{ steps.filter.outputs.web }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            api:
+              - 'apps/api/**'
+              - '.github/workflows/deploy-production.yml'
+              - 'packages/validation/**'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'package.json'
+            web:
+              - 'apps/web/**'
+              - '.github/workflows/deploy-production.yml'
+              - 'packages/validation/**'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'package.json'
+
+  deploy-api:
+    needs: paths
+    if: needs.paths.outputs.api == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render deploy
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::warning::RENDER_DEPLOY_HOOK_URL is not set; skipping API deploy."
+            exit 0
+          fi
+          curl -fsS -X POST "$HOOK"
+
+  deploy-web:
+    needs: paths
+    if: needs.paths.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Vercel deploy
+        env:
+          HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::warning::VERCEL_DEPLOY_HOOK_URL is not set; skipping web deploy."
+            exit 0
+          fi
+          curl -fsS -X POST "$HOOK"

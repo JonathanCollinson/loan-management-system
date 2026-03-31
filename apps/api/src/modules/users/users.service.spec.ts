@@ -59,7 +59,7 @@ describe('UsersService', () => {
       repo.findByEmail.mockResolvedValue({ _id: new Types.ObjectId() });
       await expect(
         service.createFieldUser(
-          { email: 'x@y.com', password: 'p', name: 'F' },
+          { email: 'x@y.com', password: 'password123', name: 'F' },
           new Types.ObjectId().toString(),
         ),
       ).rejects.toBeInstanceOf(ConflictException);
@@ -72,7 +72,7 @@ describe('UsersService', () => {
       await expect(
         service.createAdmin({
           email: 'x@y.com',
-          password: 'p',
+          password: 'password123',
           name: 'A',
         }),
       ).rejects.toBeInstanceOf(ConflictException);

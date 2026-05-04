@@ -145,4 +145,51 @@ describe('GraphQL integration (MongoMemoryServer or INTEGRATION_MONGODB_URI)', (
     expect(budgetBody.errors).toBeUndefined();
     expect(budgetBody.data?.monthlyPrincipalBudget?.month).toBe('2026-03');
   });
+
+  it('borrower summary xlsx requires auth', async () => {
+    const res = await request(app!.getHttpServer())
+      .get('/reports/borrower-summary.xlsx')
+      .expect(401);
+    expect(res.status).toBe(401);
+  });
+
+  it('borrower summary xlsx returns spreadsheet for Super Admin', async () => {
+    const loginRes = await request(app!.getHttpServer())
+      .post('/graphql')
+      .send({
+        query: `
+          mutation Login($input: LoginInput!) {
+            login(input: $input) { accessToken }
+          }
+        `,
+        variables: {
+          input: {
+            email: 'super.integration@test.com',
+            password: 'Integration123!',
+          },
+        },
+      })
+      .expect(200);
+
+    const loginBody = loginRes.body as GraphqlBody;
+    const token = loginBody.data?.login?.accessToken;
+    expect(token).toBeDefined();
+
+    const res = await request(app!.getHttpServer())
+      .get('/reports/borrower-summary.xlsx')
+      .set('Authorization', `Bearer ${token!}`)
+      .buffer(true)
+      .parse((r, cb) => {
+        const chunks: Buffer[] = [];
+        r.on('data', (ch: Buffer) => chunks.push(ch));
+        r.on('end', () => cb(null, Buffer.concat(chunks)));
+      });
+
+    expect(res.status).toBe(200);
+    expect(String(res.headers['content-type'])).toMatch(/spreadsheet/);
+    const raw = res.body as Buffer;
+    expect(Buffer.isBuffer(raw)).toBe(true);
+    expect(raw[0]).toBe(0x50);
+    expect(raw[1]).toBe(0x4b);
+  });
 });

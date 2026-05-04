@@ -1,7 +1,7 @@
 'use client';
 
 import { gql } from '@apollo/client';
-import { useQuery } from '@apollo/client/react';
+import { useLazyQuery, useQuery } from '@apollo/client/react';
 import {
   createColumnHelper,
   flexRender,
@@ -9,6 +9,21 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
+import { downloadBorrowerSummaryXlsx } from '@/lib/borrower-summary-export-download';
+
+const SUMMARY_CSV = gql`
+  query BorrowerSummaryPageCsv(
+    $month: String
+    $principalFundId: String
+    $allFunds: Boolean
+  ) {
+    borrowerLoanSummaryCsv(
+      month: $month
+      principalFundId: $principalFundId
+      allFunds: $allFunds
+    )
+  }
+`;
 
 const Q = gql`
   query BorrowerSummaryPage($month: String, $principalFundId: String) {
@@ -84,6 +99,9 @@ function currentMonthValue(): string {
 export default function BorrowerLoanSummaryPage() {
   const [month, setMonth] = useState<string>('');
   const [principalFundId, setPrincipalFundId] = useState<string>('');
+  const [loadCsv, { loading: csvLoading }] = useLazyQuery<{
+    borrowerLoanSummaryCsv: string;
+  }>(SUMMARY_CSV);
   const { data, loading, error } = useQuery<{
     capitalFundsForFilter: { id: string; name: string }[];
     borrowerLoanSummary: {
@@ -154,6 +172,33 @@ export default function BorrowerLoanSummaryPage() {
     getCoreRowModel: getCoreRowModel(),
   });
 
+  async function exportCsvMatchingTable() {
+    const res = await loadCsv({
+      variables: {
+        month: month || null,
+        principalFundId: principalFundId || null,
+        allFunds: false,
+      },
+    });
+    const csv = res.data?.borrowerLoanSummaryCsv;
+    if (!csv) return;
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `borrower-summary-${month || 'all'}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function exportXlsxMatchingTable() {
+    await downloadBorrowerSummaryXlsx({
+      month: month || null,
+      principalFundId: principalFundId || null,
+      allFunds: false,
+    });
+  }
+
   if (loading) return <p className="text-zinc-500">Loading…</p>;
   if (error) return <p className="text-red-600">{error.message}</p>;
 
@@ -207,6 +252,28 @@ export default function BorrowerLoanSummaryPage() {
               </button>
             </div>
           </label>
+          <div className="flex flex-col gap-1 text-sm">
+            <span className="text-zinc-600 dark:text-zinc-400">Export</span>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={csvLoading}
+                className="rounded border border-zinc-300 px-3 py-1 text-sm disabled:opacity-50 dark:border-zinc-600"
+                onClick={() => void exportCsvMatchingTable()}
+              >
+                Download CSV
+              </button>
+              <button
+                type="button"
+                disabled={csvLoading}
+                className="rounded border border-zinc-300 px-3 py-1 text-sm disabled:opacity-50 dark:border-zinc-600"
+                onClick={() => void exportXlsxMatchingTable()}
+              >
+                Download Excel
+              </button>
+            </div>
+          </div>
+
         </div>
       </div>
       <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">

@@ -35,12 +35,39 @@ export class BorrowersResolver {
     @CurrentUser() actor: JwtUser,
     @Args('month', { nullable: true }) month?: string,
     @Args('principalFundId', { nullable: true }) principalFundId?: string,
+    @Args('borrowerIds', { type: () => [String], nullable: true })
+    borrowerIds?: string[],
+    @Args('createdFrom', { nullable: true }) createdFrom?: string,
+    @Args('createdTo', { nullable: true }) createdTo?: string,
   ): Promise<BorrowerLoanSummaryPayload> {
-    return this.borrowersService.getBorrowerLoanSummary(
-      actor,
+    return this.borrowersService.getBorrowerLoanSummary(actor, {
       month,
       principalFundId,
-    );
+      borrowerIds,
+      createdFrom,
+      createdTo,
+    });
+  }
+
+  @Query(() => String)
+  async borrowerLoanSummaryCsv(
+    @CurrentUser() actor: JwtUser,
+    @Args('month', { nullable: true }) month?: string,
+    @Args('principalFundId', { nullable: true }) principalFundId?: string,
+    @Args('borrowerIds', { type: () => [String], nullable: true })
+    borrowerIds?: string[],
+    @Args('createdFrom', { nullable: true }) createdFrom?: string,
+    @Args('createdTo', { nullable: true }) createdTo?: string,
+    @Args('allFunds', { nullable: true }) allFunds?: boolean,
+  ): Promise<string> {
+    return this.borrowersService.buildBorrowerLoanSummaryCsv(actor, {
+      month,
+      principalFundId,
+      borrowerIds,
+      createdFrom,
+      createdTo,
+      allFunds,
+    });
   }
 
   @Query(() => BorrowerObject)

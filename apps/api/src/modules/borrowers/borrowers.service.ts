@@ -9,7 +9,7 @@ import { Model, Types } from 'mongoose';
 import { BorrowerAudience } from '../../common/enums/borrower-audience.enum';
 import { UserRole } from '../../common/enums/user-role.enum';
 import type { JwtUser } from '../../common/types/jwt-user';
-import { parseMonth } from '../../common/utils/month-range.util';
+import { resolveLoanCreatedAtBounds } from '../../common/utils/loan-created-range.util';
 import { Loan, LoanDocument } from '../loans/schemas/loan.schema';
 import { CapitalFundsService } from '../capital-funds/capital-funds.service';
 import { UsersRepository } from '../users/users.repository';
@@ -23,6 +23,15 @@ import {
 } from './graphql/borrower-loan-summary.object';
 import { BorrowerDocument } from './schemas/borrower.schema';
 import { BorrowersRepository } from './borrowers.repository';
+import {
+  formatBorrowerLoanSummaryCsvAllFunds,
+  formatBorrowerLoanSummaryCsvSingle,
+} from './borrower-loan-summary-csv';
+import type {
+  BorrowerLoanSummaryCsvOptions,
+  BorrowerLoanSummaryFilterInput,
+  PerFundBorrowerLoanSummary,
+} from './borrower-loan-summary-filter.input';
 
 @Injectable()
 export class BorrowersService {
@@ -140,18 +149,40 @@ export class BorrowersService {
 
   async getBorrowerLoanSummary(
     actor: JwtUser,
-    month?: string | null,
-    principalFundId?: string | null,
+    input: BorrowerLoanSummaryFilterInput = {},
   ): Promise<BorrowerLoanSummaryPayload> {
+    const {
+      month = null,
+      principalFundId = null,
+      borrowerIds: filterBorrowerIds = null,
+      createdFrom = null,
+      createdTo = null,
+    } = input;
+
     await this.capitalFundsService.assertCanUsePrincipalFundForFilter(
       actor,
       principalFundId,
     );
 
-    const borrowerDocs =
+    const { start: createdStart, end: createdEnd } = resolveLoanCreatedAtBounds(
+      {
+        month,
+        createdFrom,
+        createdTo,
+      },
+    );
+
+    let borrowerDocs =
       actor.role === UserRole.USER
         ? await this.repo.findAccessibleForFieldUser(actor.id)
         : await this.repo.findAll();
+
+    if (filterBorrowerIds?.length) {
+      const want = new Set(
+        filterBorrowerIds.filter((id) => Types.ObjectId.isValid(id)),
+      );
+      borrowerDocs = borrowerDocs.filter((d) => want.has(d._id.toString()));
+    }
 
     const borrowerIds = borrowerDocs.map((b) => b._id);
     const loanFilter: Record<string, unknown> = {
@@ -160,9 +191,12 @@ export class BorrowersService {
     if (principalFundId) {
       loanFilter.principalFundId = new Types.ObjectId(principalFundId);
     }
-    if (month) {
-      const { start, end } = parseMonth(month);
-      loanFilter.createdAt = { $gte: start, $lte: end };
+    if (createdStart && createdEnd) {
+      loanFilter.createdAt = { $gte: createdStart, $lte: createdEnd };
+    } else if (createdStart) {
+      loanFilter.createdAt = { $gte: createdStart };
+    } else if (createdEnd) {
+      loanFilter.createdAt = { $lte: createdEnd };
     }
 
     const loans =
@@ -223,5 +257,42 @@ export class BorrowersService {
         totalRepayable,
       },
     };
+  }
+
+  /**
+   * One payload per accessible capital fund (for XLSX sheets or multi-section CSV).
+   */
+  async listBorrowerLoanSummaryPerFund(
+    actor: JwtUser,
+    filter: Omit<BorrowerLoanSummaryFilterInput, 'principalFundId'>,
+  ): Promise<PerFundBorrowerLoanSummary[]> {
+    const funds = await this.capitalFundsService.getFundsForFilter(actor);
+    const out: PerFundBorrowerLoanSummary[] = [];
+    for (const f of funds) {
+      const payload = await this.getBorrowerLoanSummary(actor, {
+        ...filter,
+        principalFundId: f.id,
+      });
+      out.push({ fundId: f.id, fundName: f.name, payload });
+    }
+    return out;
+  }
+
+  async buildBorrowerLoanSummaryCsv(
+    actor: JwtUser,
+    options: BorrowerLoanSummaryCsvOptions,
+  ): Promise<string> {
+    const { allFunds, ...filter } = options;
+    if (allFunds) {
+      if (filter.principalFundId) {
+        throw new BadRequestException(
+          'Do not pass principalFundId when allFunds is true',
+        );
+      }
+      const sections = await this.listBorrowerLoanSummaryPerFund(actor, filter);
+      return formatBorrowerLoanSummaryCsvAllFunds(sections);
+    }
+    const payload = await this.getBorrowerLoanSummary(actor, filter);
+    return formatBorrowerLoanSummaryCsvSingle(payload);
   }
 }

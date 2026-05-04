@@ -3,6 +3,7 @@
 import { gql } from '@apollo/client';
 import { useLazyQuery } from '@apollo/client/react';
 import { useState } from 'react';
+import { BorrowerSummaryExportPanel } from '@/components/borrower-summary-export-panel';
 
 const REPORT = gql`
   query MonthlyReport($month: String!) {
@@ -22,7 +23,7 @@ const CSV = gql`
   }
 `;
 
-export default function ReportsPage() {
+function MonthlyOperationsSection() {
   const [month, setMonth] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -51,7 +52,7 @@ export default function ReportsPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `report-${month}.csv`;
+    a.download = `monthly-operations-${month}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -59,8 +60,12 @@ export default function ReportsPage() {
   const r = data?.monthlyReport;
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Monthly reports</h1>
+    <div className="space-y-4">
+      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        Org-wide or field-user-scoped KPIs for a calendar month: count of loans
+        issued, principal loaned, repayment events, and cash received. This is
+        not the same as the borrower-level summary export in the other tab.
+      </p>
       <div className="flex flex-wrap items-end gap-2">
         <label className="text-sm">
           Month (YYYY-MM)
@@ -111,6 +116,44 @@ export default function ReportsPage() {
           </div>
         </dl>
       )}
+    </div>
+  );
+}
+
+export default function ReportsPage() {
+  const [tab, setTab] = useState<'borrower' | 'monthly'>('borrower');
+
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-semibold">Reports</h1>
+
+      <div className="flex gap-1 border-b border-zinc-200 dark:border-zinc-700">
+        <button
+          type="button"
+          className={`border-b-2 px-3 py-2 text-sm font-medium ${
+            tab === 'borrower'
+              ? 'border-zinc-900 text-zinc-900 dark:border-zinc-100 dark:text-zinc-100'
+              : 'border-transparent text-zinc-500'
+          }`}
+          onClick={() => setTab('borrower')}
+        >
+          Borrower summary export
+        </button>
+        <button
+          type="button"
+          className={`border-b-2 px-3 py-2 text-sm font-medium ${
+            tab === 'monthly'
+              ? 'border-zinc-900 text-zinc-900 dark:border-zinc-100 dark:text-zinc-100'
+              : 'border-transparent text-zinc-500'
+          }`}
+          onClick={() => setTab('monthly')}
+        >
+          Monthly operations
+        </button>
+      </div>
+
+      {tab === 'borrower' && <BorrowerSummaryExportPanel />}
+      {tab === 'monthly' && <MonthlyOperationsSection />}
     </div>
   );
 }

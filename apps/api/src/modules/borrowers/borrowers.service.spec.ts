@@ -99,11 +99,9 @@ describe('BorrowersService', () => {
       new ForbiddenException(),
     );
     await expect(
-      service.getBorrowerLoanSummary(
-        fieldUser('u1'),
-        null,
-        new Types.ObjectId().toString(),
-      ),
+      service.getBorrowerLoanSummary(fieldUser('u1'), {
+        principalFundId: new Types.ObjectId().toString(),
+      }),
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
 
@@ -125,11 +123,11 @@ describe('BorrowersService', () => {
         paidAt: null,
       },
     ]);
-    const out = await service.getBorrowerLoanSummary(
-      { id: 'a1', email: 'a@test', role: UserRole.ADMIN },
-      null,
-      null,
-    );
+    const out = await service.getBorrowerLoanSummary({
+      id: 'a1',
+      email: 'a@test',
+      role: UserRole.ADMIN,
+    });
     expect(out.rows).toHaveLength(1);
     expect(out.rows[0].borrowerId).toBe(withLoan.toString());
     expect(out.totals).toEqual({
@@ -145,8 +143,7 @@ describe('BorrowersService', () => {
     const fundId = new Types.ObjectId();
     await service.getBorrowerLoanSummary(
       { id: 'a1', email: 'a@test', role: UserRole.ADMIN },
-      null,
-      fundId.toString(),
+      { principalFundId: fundId.toString() },
     );
     expect(
       capitalFundsService.assertCanUsePrincipalFundForFilter,
